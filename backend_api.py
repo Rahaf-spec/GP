@@ -1,3 +1,11 @@
+# Get the original game repositry: git clone https://github.com/pablogozalvez/Super-Mario-Phaser
+# change the game.js file with the one inside the game file
+# install requirments for backend :pip install fastapi uvicorn opencv-python mediapipe pillow torch torchvision
+# interminal run : uvicorn backend_api:app --reload
+# will open on http://localhost:5500
+# in the game folder open an integrated terminaal and run Uvicorn running on http://127.0.0.1:8000 then python -m http.server 5500 
+# will open on http://127.0.0.1:8000
+
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
