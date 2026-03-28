@@ -9,26 +9,31 @@ let commandActive = false;
 let reactionTimes = [];
 let confidenceSum = 0;
 let confidenceCount = 0;
-// -------- AI Gesture Control --------
-var aiGesture = "NoHand";
-var aiConfidence = 0;
+let lastObstacleX = 0; 
 
+// -------- AI GESTURE CONTROL --------
+let aiGesture = "NoHand";
+let aiConfidence = 0;
+
+// -------- GAME CONFIGURATION --------
 const loadingGif = document.querySelectorAll('.loading-gif');
-
 const mobileDevice = isMobileDevice();
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight * 1.1;
 
-const velocityX = screenWidth / 9 ; 
-const velocityY = screenHeight / 1.15; 
+const velocityX = screenWidth / 4.5;
+const velocityY = screenHeight / 1.15;
 
 const levelGravity = velocityY * 2;
+
+// Accessibility: Adjust these to make it easier for the kids
+const KIDS_SPEED_MULTIPLIER = 0.5; // Slows Mario down to 50% speed
+const WARNING_DISTANCE = screenWidth * 0.4; // Triggers the jump command early
 
 var config = {
     type: Phaser.AUTO,
     width: screenWidth,
-
     height: screenHeight,
     backgroundColor: 0x8585FF,
     parent: 'game',
@@ -54,15 +59,11 @@ const platformHeight = screenHeight / 5;
 
 const startOffset = screenWidth / 2.5;
 
-// Hole with is calculated dividing the world width in x holes of the same size.
 const platformPieces = 100;
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
 
 var isLevelOverworld;
-
-// Create empty holes array, every hole will have their object with the hole start and end
 var worldHolesCoords = [];
-
 var emptyBlocksList = [];
 
 var player;
@@ -83,7 +84,6 @@ var controlKeys = {
     RIGHT: null,
     FIRE: null,
     PAUSE: null
-
 };
 
 var score = 0;
@@ -102,38 +102,48 @@ function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 }
 
-// Source: https://github.com/photonstorm/phaser3-examples/blob/master/public/src/tilemap/collision/matter%20destroy%20tile%20bodies.js#L35
+// ---------------- BACKEND GESTURE FETCH ----------------
+function fetchGesture() {
+    fetch("http://127.0.0.1:8000/gesture")
+        .then(response => response.json())
+        .then(data => {
+            aiGesture = data.gesture;
+            aiConfidence = data.confidence;
+        })
+        .catch(err => {
+            // Silently fail if backend isn't reachable yet
+        });
+}
+
+// Call the backend every 100ms
+setInterval(fetchGesture, 100);
+
+// ---------------- PHASER CORE FUNCTIONS ----------------
 
 var SmoothedHorionztalControl = new Phaser.Class({
-
     initialize:
-
     function SmoothedHorionztalControl(speed) {
             this.msSpeed = speed;
             this.value = 0;
     },
-
     moveLeft: function(delta) {
         if (this.value > 0) { this.reset(); }
         this.value -= this.msSpeed * 3.5;
         if (this.value < -1) { this.value = -1; }
         playerController.time.rightDown += delta;
     },
-
     moveRight: function(delta) {
         if (this.value < 0) { this.reset(); }
         this.value += this.msSpeed * 3.5;
         if (this.value > 1) { this.value = 1; }
         playerController.time.leftDown += delta;
     },
-
     reset: function() {
         this.value = 0;
     }
 });
 
 function preload() {
-
     var progressBox = this.add.graphics();
     var progressBar = this.add.graphics();
     progressBox.fillStyle(0x222222, 1);
@@ -167,20 +177,15 @@ function preload() {
         loadingGif.forEach(gif => {gif.style.display = 'none';});
     });
 
-    // Load Fonts
     this.load.bitmapFont('carrier_command', 'assets/fonts/carrier_command.png', 'assets/fonts/carrier_command.xml');
-
-    // Load plugins
     this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
     this.load.plugin('rexcheckboxplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexcheckboxplugin.min.js', true);
     this.load.plugin('rexsliderplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexsliderplugin.min.js', true);
     this.load.plugin('rexkawaseblurpipelineplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexkawaseblurpipelineplugin.min.js', true);
 
     isLevelOverworld = Phaser.Math.Between(0, 100) <= 84;
-
     let levelStyle = isLevelOverworld ? 'overworld' : 'underground';
 
-    // Load entities sprites
     this.load.spritesheet('mario', 'assets/entities/mario.png', { frameWidth: 18, frameHeight: 16 });
     this.load.spritesheet('mario-grown', 'assets/entities/mario-grown.png', { frameWidth: 18, frameHeight: 32 });
     this.load.spritesheet('mario-fire', 'assets/entities/mario-fire.png', { frameWidth: 18, frameHeight: 32 });
@@ -188,11 +193,9 @@ function preload() {
     this.load.spritesheet('koopa', 'assets/entities/koopa.png', { frameWidth: 16, frameHeight: 24 });
     this.load.spritesheet('shell', 'assets/entities/shell.png', { frameWidth: 16, frameHeight: 15 });
 
-    // Load objects sprites
     this.load.spritesheet('fireball', 'assets/entities/fireball.png', { frameWidth: 8, frameHeight: 8 });
     this.load.spritesheet('fireball-explosion', 'assets/entities/fireball-explosion.png', { frameWidth: 16, frameHeight: 16 });
 
-    // Load props
     this.load.image('cloud1', 'assets/scenery/overworld/cloud1.png');
     this.load.image('cloud2', 'assets/scenery/overworld/cloud2.png');
     this.load.image('mountain1', 'assets/scenery/overworld/mountain1.png');
@@ -205,7 +208,6 @@ function preload() {
     this.load.image('final-flag', 'assets/scenery/final-flag.png');
     this.load.image('sign', 'assets/scenery/sign.png');
 
-    // Load tubes
     this.load.image('horizontal-tube', 'assets/scenery/horizontal-tube.png');
     this.load.image('horizontal-final-tube', 'assets/scenery/horizontal-final-tube.png');
     this.load.image('vertical-extralarge-tube', 'assets/scenery/vertical-large-tube.png');
@@ -213,14 +215,10 @@ function preload() {
     this.load.image('vertical-medium-tube', 'assets/scenery/vertical-medium-tube.png');
     this.load.image('vertical-large-tube', 'assets/scenery/vertical-large-tube.png');
 
-    
-    // Load HUD images
     this.load.image('gear', 'assets/hud/gear.png');
     this.load.image('settings-bubble', 'assets/hud/settings-bubble.png');
-
     this.load.spritesheet('npc', 'assets/hud/npc.png', { frameWidth: 16, frameHeight: 24 });
 
-    // Load platform bricks and structures
     this.load.image('floorbricks', 'assets/scenery/' + levelStyle + '/floorbricks.png');
     this.load.image('start-floorbricks', 'assets/scenery/overworld/floorbricks.png');
     this.load.image('block', 'assets/blocks/' + levelStyle + '/block.png');
@@ -231,15 +229,12 @@ function preload() {
     this.load.spritesheet('mistery-block', 'assets/blocks/' + levelStyle + '/misteryBlock.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('custom-block', 'assets/blocks/overworld/customBlock.png', { frameWidth: 16, frameHeight: 16 });
 
-    // Load collectibles
     this.load.spritesheet('coin', 'assets/collectibles/coin.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('ground-coin', 'assets/collectibles/underground/ground-coin.png', { frameWidth: 10, frameHeight: 14 });
     this.load.spritesheet('fire-flower', 'assets/collectibles/' + levelStyle + '/fire-flower.png', { frameWidth: 16, frameHeight: 16 });
     this.load.image('live-mushroom', 'assets/collectibles/live-mushroom.png');
     this.load.image('super-mushroom', 'assets/collectibles/super-mushroom.png');
 
-
-    // Load sounds and music
     this.load.audio('music', 'assets/sound/music/overworld/theme.mp3');
     this.load.audio('underground-music', 'assets/sound/music/underground/theme.mp3');
     this.load.audio('hurry-up-music', 'assets/sound/music/' + levelStyle +'/hurry-up-theme.mp3');
@@ -325,41 +320,25 @@ function initSounds() {
 }
 
 function create() {
-    // -------- Command Text UI --------
-this.commandText = this.add.text(20, 20, "", {
-    fontSize: "28px",
-    fill: "#ffffff"
-});
+    this.commandText = this.add.text(screenWidth / 2, 80, "Game Starting...", {
+        fontSize: "36px",
+        fill: "#ffffff",
+        backgroundColor: "#000000",
+        padding: { x: 20, y: 10 }
+    }).setOrigin(0.5).setScrollFactor(0); 
+    this.commandText.depth = 1000;
 
-giveNewCommand(this);
-//setInterval(() => giveNewCommand(this), 4000);
-this.time.addEvent({
-    delay: 4000,
-    loop: true,
-    callback: () => giveNewCommand(this)
-});
     playerController = {
-        time: {
-            leftDown: 0,
-            rightDown: 0
-        },
-        direction: {
-            positive: true
-        },
-        speed: {
-            run: velocityX,
-        }
+        time: { leftDown: 0, rightDown: 0 },
+        direction: { positive: true },
+        speed: { run: velocityX }
     };
 
     this.physics.world.setBounds(0, 0, worldWidth, screenHeight);
-
-    // Create camera
     this.cameras.main.setBounds(0, 0, worldWidth, screenHeight);
     this.cameras.main.isFollowing = false;
-    //this.cameras.main.followOffset.set(startOffset / 6, 0);
 
     initSounds.call(this);
-
     createAnimations.call(this);
     createPlayer.call(this);
     generateLevel.call(this);
@@ -371,38 +350,15 @@ this.time.addEvent({
     
     smoothedControls = new SmoothedHorionztalControl(0.001);
 }
-// new 
- function giveNewCommand(scene) {
 
-    // if previous command was never answered → count as miss
-    if (commandActive) {
-        commandActive = false;
-    }
-
-    const commands = ["Open", "Close"];
-    currentCommand = commands[Math.floor(Math.random() * commands.length)];
-
-    commandStartTime = Date.now();
-    commandActive = true;
-
-    totalCommands++;
-
-    scene.commandText.setText("Do: " + currentCommand);
-}
 function createControls() {
-
     this.joyStick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
         x: screenWidth * 0.118,
         y: screenHeight / 1.68,
         radius: mobileDevice ? 100 : 0,
         base: this.add.circle(0, 0, mobileDevice ? 75 : 0, 0x0000000, 0.05),
         thumb: this.add.circle(0, 0, mobileDevice ? 25 : 0, 0xcccccc, 0.2),
-        // dir: '8dir',   // 'up&down'|0|'left&right'|1|'4dir'|2|'8dir'|3
-        // forceMin: 16,
-        // enable: true
     });
-
-    // Set control keys
 
     const keyNames = ['JUMP', 'DOWN', 'LEFT', 'RIGHT', 'FIRE', 'PAUSE'];
     const defaultCodes = [Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.D, Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.ESC];
@@ -411,17 +367,7 @@ function createControls() {
       const keyCode = localStorage.getItem(keyName) ? Number(localStorage.getItem(keyName)) : defaultCodes[i];
       controlKeys[keyName] = this.input.keyboard.addKey(keyCode);
     });
-
-    /*
-    controlKeys.PAUSE.on('down', function () {
-        if (!this.settingsMenuOpen)
-            showSettings.call(this);
-        else
-            hideSettings.call(this);
-    });*/
 }
-
-// This will generate a random coordinate, that can't be within a hole
 
 function generateRandomCoordinate(entitie = false, ground = true) {
     const startPos = entitie ? screenWidth * 1.5 : screenWidth;
@@ -436,23 +382,15 @@ function generateRandomCoordinate(entitie = false, ground = true) {
         return generateRandomCoordinate.call(this, entitie, ground);
       }
     }
-  
     return coordinate;
-  }
+}
   
-
-// World generation
-
 function drawWorld() {
-    //Drawing scenery props
-
-    //> Drawing the Sky
     this.add.rectangle(screenWidth, 0,worldWidth, screenHeight, isLevelOverworld ? 0x8585FF : 0x000000).setOrigin(0).depth = -1;
 
     let propsY = screenHeight - platformHeight;
 
     if (isLevelOverworld) {
-        //> Clouds
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 760), Math.trunc(worldWidth / 380)); i++) {
             let x = generateRandomCoordinate(false, false);
             let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
@@ -463,7 +401,6 @@ function drawWorld() {
             }
         }
 
-        //> Mountains
         for (i = 0; i < Phaser.Math.Between(worldWidth / 6400, worldWidth / 3800); i++) {
             let x = generateRandomCoordinate();
 
@@ -474,7 +411,6 @@ function drawWorld() {
             }
         }
         
-        //> Bushes
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 960), Math.trunc(worldWidth / 760)); i++) {
             let x = generateRandomCoordinate();
 
@@ -485,15 +421,12 @@ function drawWorld() {
             }
         }
 
-        //> Fences
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 4000), Math.trunc(worldWidth / 2000)); i++) {
             let x = generateRandomCoordinate();
-
             this.add.tileSprite(x, propsY, Phaser.Math.Between(100, 250), 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
         }
     }
 
-    //> Final flag
     this.finalFlagMast = this.add.tileSprite(worldWidth - (worldWidth / 30), propsY, 16, 167, 'flag-mast').setOrigin(0, 1).setScale(screenHeight / 400);
     this.physics.add.existing(this.finalFlagMast);
     this.finalFlagMast.immovable = true;
@@ -502,22 +435,15 @@ function drawWorld() {
     this.physics.add.overlap(player, this.finalFlagMast, null, raiseFlag, this);
     this.physics.add.collider(this.platformGroup.getChildren(), this.finalFlagMast);
 
-    //> Flag
     this.finalFlag = this.add.image(worldWidth - (worldWidth / 30), propsY * 0.93, 'final-flag').setOrigin(0.5, 1);
     this.finalFlag.setScale(screenHeight / 400);
 
-    //> Castle
     this.add.image(worldWidth - (worldWidth / 75), propsY, 'castle').setOrigin(0.5, 1).setScale(screenHeight / 300);
 }
 
 function generateLevel() {
-    //> Creating the platform
-
-    // pieceStart will be the next platform piece start pos. This value will be modified after each execution
     let pieceStart = screenWidth;
-    // This will tell us if last generated piece of platform was empty, to avoid generating another empty piece next to it.
     let lastWasHole = 0;
-    // Structures will generate every 2/3 platform pieces
     let lastWasStructure = 0;
 
     this.platformGroup = this.add.group();
@@ -529,21 +455,17 @@ function generateLevel() {
     this.groundCoinsGroup = this.add.group();
 
     if (!isLevelOverworld) {
-        //this.blocksGroup.add(this.add.tileSprite(worldWidth - screenWidth, screenHeight - (platformHeight * 4.5), screenWidth * 2.9, 16, 'block').setScale(screenHeight / 345).setOrigin(1, 0));
         this.blocksGroup.add(this.add.tileSprite(screenWidth, screenHeight - platformHeight / 1.2, 16, screenHeight - platformHeight, 'block2').setScale(screenHeight / 345).setOrigin(0, 1));
         this.undergroundRoof = this.add.tileSprite(screenWidth * 1.2, screenHeight / 13, worldWidth / 2.68, 16, 'block2').setScale(screenHeight / 345).setOrigin(0);
         this.blocksGroup.add(this.undergroundRoof);
     }
 
     for (i=0; i <= platformPieces; i++) {
-        // Holes will have a 10% chance of spawning
         let number = Phaser.Math.Between(0, 100);
 
-        // Check if its not a hole, this means is not that 20%, is not in the spawn safe area and is not close to the end castle.
         if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= 0 || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
             lastWasHole--;
 
-            //> Create platform
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
             this.physics.add.existing(Npiece);
             Npiece.body.immovable = true;
@@ -551,10 +473,7 @@ function generateLevel() {
             Npiece.isPlatform = true;
             Npiece.depth = 2;
             this.platformGroup.add(Npiece);
-            // Apply player collision with platform
             this.physics.add.collider(player, Npiece);
-
-            //> Creating world structures
 
             if (!(pieceStart >= (worldWidth - screenWidth * (isLevelOverworld ? 1 : 1.5))) && pieceStart > (screenWidth + platformPiecesWidth * 2) && lastWasHole < 1 && lastWasStructure < 1) {
                 lastWasStructure = generateStructure.call(this, pieceStart);
@@ -563,7 +482,6 @@ function generateLevel() {
                 lastWasStructure--;
             }
         } else {
-            // Save every hole start and end for later use
             worldHolesCoords.push({ start: pieceStart, 
                 end: pieceStart + platformPiecesWidth * 2});
             
@@ -618,7 +536,6 @@ function generateLevel() {
         fallProtections[i].body.immovable = true;
     }
 
-    // Stablish properties for every generated structure
     let misteryBlocks = this.misteryBlocksGroup.getChildren();
     for (let i = 0; i < misteryBlocks.length; i++) {
         this.physics.add.existing(misteryBlocks[i]);
@@ -629,7 +546,6 @@ function generateLevel() {
         this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
     }
     
-    // Apply player collision with blocks
     let blocks = this.blocksGroup.getChildren();
     for (let i = 0; i < blocks.length; i++) {
         this.physics.add.existing(blocks[i]);
@@ -639,7 +555,6 @@ function generateLevel() {
         this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
     }
 
-    // Apply player collision with immovable blocks
     let constructionBlocks = this.constructionBlocksGroup.getChildren();
     for (let i = 0; i < constructionBlocks.length; i++) {
         this.physics.add.existing(constructionBlocks[i]);
@@ -650,7 +565,6 @@ function generateLevel() {
         this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
     }
 
-    // Apply player collision with immovable blocks
     let immovableBlocks = this.immovableBlocksGroup.getChildren();
     for (let i = 0; i < immovableBlocks.length; i++) {
         this.physics.add.existing(immovableBlocks[i]);
@@ -672,23 +586,16 @@ function generateLevel() {
 }
 
 function startLevel(player, trigger) {
-
     if (!player.body.blocked.right && !trigger.body.blocked.left)
         return;
 
     this.powerDownSound.play();
-
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
-
     applyPlayerInvulnerability.call(this, 4000);
-
     playerBlocked = true;
-
     player.setVelocityX(5);
     player.anims.play('run', true).flipX = false;
-
     this.cameras.main.fadeOut(900, 0, 0, 0);
-
     this.hereWeGoSound.play();
 
     setTimeout(() => {
@@ -697,7 +604,6 @@ function startLevel(player, trigger) {
             this.musicTheme.stop();
             this.undergroundMusicTheme.play({ loop: -1 });
         }
-
         player.x = screenWidth * 1.1;
         this.cameras.main.pan(screenWidth * 1.5, 0, 0);
         playerBlocked = false;
@@ -706,20 +612,20 @@ function startLevel(player, trigger) {
         updateTimer.call(this);
         this.startScreenTrigger.destroy();
         levelStarted = true;
+        
+        // Initial command once they land
+        this.commandText.setText("🟢 OPEN hand to RUN 🟢");
+
         if (this.settingsMenuOpen)hideSettings.call(this);
     }, 1100);
 }
 
-
 function teleportToLevelEnd(player, trigger) {
-
     if (!player.body.blocked.right && !trigger.body.blocked.left)
         return;
     
     playerBlocked = true;
-
     this.cameras.main.stopFollow();
-
     this.powerDownSound.play();
 
     this.tweens.add({
@@ -729,9 +635,7 @@ function teleportToLevelEnd(player, trigger) {
     });
 
     this.cameras.main.fadeOut(450, 0, 0, 0);
-
     player.anims.play(playerState > 0 ? playerState == 1 ? 'grown-mario-run'  : 'fire-mario-run' : 'run', true).flipX = false;
-
     this.undergroundRoof.destroy();
 
     setTimeout(() => {
@@ -765,45 +669,30 @@ function teleportToLevelEnd(player, trigger) {
 }
 
 function drawStartScreen() {
-    
     const screenCenterX = this.cameras.main.worldView.x + this.cameras.main.width / 2;
-
-    // Draw sky
     this.add.rectangle(0, 0, screenWidth, screenHeight, 0x8585FF).setOrigin(0).depth = -1;
 
     let platform = this.add.tileSprite(0, screenHeight, screenWidth / 2, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5);
     this.physics.add.existing(platform);
     platform.body.immovable = true;
     platform.body.allowGravity = false;
-    // Apply player collision with platform
     this.physics.add.collider(player, platform);
 
-    /*
-    this.add.text(screenWidth / 2, screenHeight - (screenHeight* 0.9), 
-    "Known bugs: \n. Mobile controls are (at least) not nice",
-    { fontFamily: 'pixel_nums', fontSize: (screenWidth / 115), align: 'left'}).setLineSpacing(screenHeight / 34.5);
-    */
-   
     this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 1.25, screenHeight / 2, 'cloud1').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 1.05, screenHeight / 6.5, 'cloud2').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 3, screenHeight / 3.5, 'cloud2').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 2.65, screenHeight / 2.8, 'cloud2').setScale(screenHeight / 1725);
-
     this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
-
     this.add.image(screenWidth / 25, screenHeight / 10, 'sign').setOrigin(0).setScale(screenHeight / 350);
 
     let propsY = screenHeight - platformHeight;
 
     this.add.image(screenWidth / 50, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
     this.add.image(screenWidth / 300, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-
     this.add.image(screenWidth / 4, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.image(screenWidth / 1.55, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.image(screenWidth / 1.5, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-
-
     this.add.tileSprite(screenWidth / 15, propsY, 350, 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
 
     this.customBlock = this.add.sprite(screenCenterX, screenHeight - (platformHeight * 1.9),'custom-block').setScale(screenHeight / 345);
@@ -816,20 +705,19 @@ function drawStartScreen() {
     this.customBlock.body.immovable = true;
 
     this.add.image(screenCenterX, screenHeight - (platformHeight * 1.9), 'gear').setScale(screenHeight / 13000).setInteractive().on('pointerdown', () => showSettings.call(this));
-
     this.add.image(screenCenterX * 1.12, screenHeight - (platformHeight * 1.5), 'settings-bubble').setScale(screenHeight / 620);
-
     this.add.sprite(screenCenterX * 1.07, screenHeight - platformHeight, 'npc').setOrigin(0.5, 1).setScale(screenHeight / 365).anims.play('npc-default', true);
 }
 
+// ---------------- RESULTS AND METRICS ----------------
+
 function raiseFlag() {
-    if (flagRaised) {
-        return false;
-    }
-
+    if (flagRaised) { return false; }
+    
+    this.commandText.setText("Goal Reached!");
+    
     this.cameras.main.stopFollow();
-
-    this.timeLeftText.stopped = true;
+    if(this.timeLeftText) this.timeLeftText.stopped = true;
 
     this.musicTheme.stop();
     this.undergroundMusicTheme.stop();
@@ -850,12 +738,28 @@ function raiseFlag() {
     playerBlocked = true;
 
     addToScore.call(this, 2000, player);
-// our result 
-setTimeout(() => {
-    showResults(this);
-}, 2500);
+
+    // Show AI metrics after celebration
+    setTimeout(() => {
+        showResults(this);
+    }, 2500);
 
     return false;
+}
+
+function showResults(scene) {
+    const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
+    const avgConfidence = confidenceCount > 0 ? (confidenceSum / confidenceCount).toFixed(2) : "0.00";
+    const avgReaction = reactionTimes.length > 0 ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2) : "0.00";
+
+    const bg = scene.add.rectangle(screenWidth / 2, screenHeight / 2, 700, 400, 0x000000, 0.85);
+    bg.setScrollFactor(0).depth = 200;
+
+    scene.add.text(screenWidth / 2, screenHeight / 2 - 150, " Session Complete!", { fontSize: "40px", fill: "#111fe0" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    scene.add.text(screenWidth / 2, screenHeight / 2 - 50, `Correct Commands: ${correctGestures} / ${totalCommands}`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    scene.add.text(screenWidth / 2, screenHeight / 2, `Accuracy: ${accuracy}%`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    scene.add.text(screenWidth / 2, screenHeight / 2 + 50, `Average AI Confidence: ${avgConfidence}`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    scene.add.text(screenWidth / 2, screenHeight / 2 + 100, `Avg Reaction Time: ${avgReaction} sec`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
 }
 
 function consumeMushroom(player, mushroom) {
@@ -865,8 +769,7 @@ function consumeMushroom(player, mushroom) {
     addToScore.call(this, 1000, mushroom);
     mushroom.destroy();
 
-    if (playerState > 0 )
-    return;
+    if (playerState > 0 ) return;
 
     playerBlocked = true;
     this.anims.pauseAll();
@@ -889,7 +792,6 @@ function consumeMushroom(player, mushroom) {
         playerState = 1;
         updateTimer.call(this);
     }, 1000);
-    //player.body.setSize(16, 32).setOffset(1,0);
 }
 
 function consumeFireflower(player, fireFlower) {
@@ -899,8 +801,7 @@ function consumeFireflower(player, fireFlower) {
     addToScore.call(this, 1000, fireFlower);
     fireFlower.destroy();
 
-    if (playerState > 1 )
-    return;
+    if (playerState > 1 ) return;
 
     let anim = playerState > 0 ? 'grown-mario-idle' : 'idle';
 
@@ -926,7 +827,6 @@ function consumeFireflower(player, fireFlower) {
         playerState = 2;
         updateTimer.call(this);
     }, 1000);
-    //player.body.setSize(16, 32).setOffset(1,0);
 }
 
 function collectCoin(player, coin) {
@@ -934,209 +834,138 @@ function collectCoin(player, coin) {
     addToScore.call(this, 200);
     coin.destroy();
 }
-// -------- Fetch Gesture From Backend --------
-function fetchGesture() {
-    fetch("http://127.0.0.1:8000/gesture")
-        .then(response => response.json())
-        .then(data => {
-            aiGesture = data.gesture;
-            aiConfidence = data.confidence;
-        })
-        .catch(err => {
-            console.log("Backend not reachable");
-        });
+
+// ---------------- COMMAND & PROXIMITY LOGIC ----------------
+
+function triggerCommand(scene, command, uiText) {
+    currentCommand = command;
+    commandActive = true;
+    commandStartTime = Date.now();
+    scene.commandText.setText(uiText);
+    totalCommands++;
 }
 
-// Call every 100ms
-setInterval(fetchGesture, 100);
-/*function update(delta) {
-    if (gameOver || gameWinned) return;
-
-    updatePlayer.call(this, delta);
-
-    const playerVelocityX = player.body.velocity.x;
-    const camera = this.cameras.main;
-
-    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing &&
-        player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
-        camera.startFollow(player, true, 0.1, 0.05);
-        camera.isFollowing = true;
-    }
-
-    if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
-        furthestPlayerPos = player.x;
-        const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.stopFollow();
-        camera.isFollowing = false;
-    }
-
-    if (!reachedLevelEnd && !isLevelOverworld && camera.isFollowing && player.x >= worldWidth - screenWidth * 1.5) {
-        reachedLevelEnd = true;
-        camera.stopFollow();
-    }
-}
-*/
-function update(delta) {
-    if (gameOver || gameWinned) return;
-
-    if (!player || playerBlocked) return;
-    
-    if (player.y > screenHeight) {
-        killPlayer.call(this);
-        return;
-    }
-
-    // ---------------- AI CONTROL ----------------
-    const RUN_SPEED = playerController.speed.run * 0.5;
-    const JUMP_POWER = velocityY * 1.2;
-
-    // If the backend confidence is weak, treat it as NoHand
-    if (aiConfidence < 0.80) {
-        aiGesture = "NoHand";
-    }
-
-    if (aiGesture === "Open") {
-        // Walk right
-        player.setVelocityX(RUN_SPEED);
-
-        player.anims.play(
-            playerState > 0
-                ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run')
-                : 'run',
-            true
-        );
-
-        player.flipX = false;
-        // new
-       if (commandActive && currentCommand === "Open") {
-    registerCorrectGesture(this);
-}
-    }
-
-    else if (aiGesture === "Close") {
-        // Jump only when on the ground
-        if (player.body.blocked.down) {
-            player.setVelocityY(-JUMP_POWER);
-            this.jumpSound.play();
-        }
-        // new
-       if (commandActive && currentCommand === "Close") {
-    registerCorrectGesture(this);
-}
-    }
-
-    else {
-        // NoHand → stay still
-        player.setVelocityX(0);
-
-        player.anims.play(
-            playerState > 0
-                ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle')
-                : 'idle',
-            true
-        );
-    }
-
-   /* if (aiGesture === "Open") {
-        // Walk Right
-        player.setVelocityX(playerController.speed.run);
-        player.anims.play(playerState > 0 ? 
-            (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') 
-            : 'run', true);
-        player.flipX = false;
-    }
-
-    else if (aiGesture === "Close") {
-        // Jump (only if touching ground)
-        if (player.body.blocked.down) {
-            player.setVelocityY(-velocityY);
-            this.jumpSound.play();
-        }
-    }
-
-    else if (aiGesture === "NoHand") {
-        // Stop
-        player.setVelocityX(0);
-        player.anims.play(playerState > 0 ? 
-            (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle') 
-            : 'idle', true);
-    } */
-
-    // ---------------- CAMERA LOGIC ----------------
-
-    const playerVelocityX = player.body.velocity.x;
-    const camera = this.cameras.main;
-
-    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing &&
-        player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
-        camera.startFollow(player, true, 0.1, 0.05);
-        camera.isFollowing = true;
-    }
-
-    if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
-        furthestPlayerPos = player.x;
-        const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.stopFollow();
-        camera.isFollowing = false;
-    }
-
-    if (!reachedLevelEnd && !isLevelOverworld && camera.isFollowing && player.x >= worldWidth - screenWidth * 1.5) {
-        reachedLevelEnd = true;
-        camera.stopFollow();
-    }
-}
-
-function showResults(scene) {
-    const accuracy = totalCommands > 0
-        ? ((correctGestures / totalCommands) * 100).toFixed(1)
-        : "0.0";
-
-    const avgConfidence = confidenceCount > 0
-        ? (confidenceSum / confidenceCount).toFixed(2)
-        : "0.00";
-
-    const avgReaction = reactionTimes.length > 0
-        ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2)
-        : "0.00";
-
-    scene.add.rectangle(400, 300, 700, 400, 0x000000, 0.85);
-    scene.add.text(250, 200, "Great Job!", { fontSize: "40px", fill: "#ffffff" });
-
-    scene.add.text(250, 250,
-        `Correct Gestures: ${correctGestures} / ${totalCommands}`,
-        { fontSize: "26px", fill: "#ffffff" }
-    );
-
-    scene.add.text(250, 290,
-        `Accuracy: ${accuracy}%`,
-        { fontSize: "26px", fill: "#ffffff" }
-    );
-
-    scene.add.text(250, 330,
-        `Average Confidence: ${avgConfidence}`,
-        { fontSize: "26px", fill: "#ffffff" }
-    );
-
-    scene.add.text(250, 370,
-        `Average Reaction Time: ${avgReaction} seconds`,
-        { fontSize: "26px", fill: "#ffffff" }
-    );
-}
-
-// new
 function registerCorrectGesture(scene) {
     const reaction = (Date.now() - commandStartTime) / 1000;
-
+    
     reactionTimes.push(reaction);
     correctGestures++;
     confidenceSum += aiConfidence;
     confidenceCount++;
-
+    
     commandActive = false;
+    scene.commandText.setText("Great Job!");
+}
 
-    scene.commandText.setText("Correct!");
+function update(delta) {
+    if (gameOver || gameWinned || !player || playerBlocked) return;
+    
+    if (player.y > screenHeight) {
+    this.powerDownSound.play();
+    playerBlocked = true;
+    gameOver = true;
+    this.scene.restart();
+    return;
+}
 
-    scene.time.delayedCall(800, () => giveNewCommand(scene));
+
+    // --- 1. PROXIMITY SCANNER (HOLES) ---
+    let closestObstacleDist = Infinity;
+
+    if (levelStarted) {
+        for (let hole of worldHolesCoords) {
+            let dist = hole.start - player.x;
+            
+            // If hole is ahead and within warning distance
+            if (dist > 0 && dist < WARNING_DISTANCE) {
+                closestObstacleDist = dist;
+                
+                if (lastObstacleX !== hole.start && !commandActive) {
+                    triggerCommand(this, "Close", "⚠️ CLOSE hand to JUMP! ⚠️");
+                    lastObstacleX = hole.start; // Mark hole as warned
+                }
+                break; 
+            }
+        }
+
+        // If path is clear, prompt Open command
+        if (closestObstacleDist === Infinity && !commandActive && currentCommand !== "Open") {
+            triggerCommand(this, "Open", "🟢 OPEN hand to RUN 🟢");
+        }
+    }
+
+   // --- 2. AI MOVEMENT EXECUTION ---
+
+// If confidence is too low, treat it as NoHand only for safety
+if (aiConfidence < 0.70) {
+    aiGesture = "NoHand";
+}
+
+const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
+const JUMP_POWER = velocityY * 1.1;
+
+if (aiGesture === "Open") {
+    player.setVelocityX(RUN_SPEED);
+    player.flipX = false;
+
+    player.anims.play(
+        playerState > 0
+            ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run')
+            : 'run',
+        true
+    );
+
+    if (commandActive && currentCommand === "Open") {
+        registerCorrectGesture(this);
+    }
+}
+else if (aiGesture === "Close") {
+
+    // KEEP running speed while jumping
+    player.setVelocityX(RUN_SPEED);
+
+    if (player.body.blocked.down) {
+        player.setVelocityY(-JUMP_POWER);
+        this.jumpSound.play();
+
+        if (commandActive && currentCommand === "Close") {
+            registerCorrectGesture(this);
+        }
+    }
+}
+
+else {
+    player.setVelocityX(0);
+
+    player.anims.play(
+        playerState > 0
+            ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle')
+            : 'idle',
+        true
+    );
+}
+
+
+    // --- 3. CAMERA LOGIC ---
+    const playerVelocityX = player.body.velocity.x;
+    const camera = this.cameras.main;
+
+    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing &&
+        player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
+        camera.startFollow(player, true, 0.1, 0.05);
+        camera.isFollowing = true;
+    }
+
+    if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
+        furthestPlayerPos = player.x;
+        const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
+        camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
+        camera.stopFollow();
+        camera.isFollowing = false;
+    }
+
+    if (!reachedLevelEnd && !isLevelOverworld && camera.isFollowing && player.x >= worldWidth - screenWidth * 1.5) {
+        reachedLevelEnd = true;
+        camera.stopFollow();
+    }
 }
