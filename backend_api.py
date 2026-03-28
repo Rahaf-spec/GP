@@ -1,7 +1,7 @@
 # Get the original game repositry: git clone https://github.com/pablogozalvez/Super-Mario-Phaser
 # change the game.js file with the one inside the game file
 # install requirments for backend :pip install fastapi uvicorn opencv-python mediapipe pillow torch torchvision
-# interminal run : uvicorn backend_api:app --reload
+# interminal run : uvicorn backend_api:app --reload or python -m uvicorn backend_api:app --reload
 # will open on http://localhost:5500
 # in the game folder open an integrated terminaal and run Uvicorn running on http://127.0.0.1:8000 then python -m http.server 5500 
 # will open on http://127.0.0.1:8000
@@ -54,7 +54,7 @@ transform = transforms.Compose([
 
 # ------------------ CAMERA ------------------
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 latest_prediction = {
     "gesture": "NoHand",
