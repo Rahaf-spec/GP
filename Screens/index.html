@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Hand Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>Hand Hero</h1>
+            </div>
+            <div class="logo">🖐️</div>
+        </div>
+
+        <!-- SIGN UP PAGE -->
+        <div id="signin" class="screen active">
+            <div class="grid-2 one-col">
+                <div class="card">
+                    <div class="center">
+                        <div class="emoji">✨</div>
+                        <div class="title">Create Account</div>
+                        <div class="subtitle">Join the game and track your progress</div>
+                    </div>
+
+                    <input type="text" placeholder="Full Name" id="signName">
+                    <input type="text" placeholder="Username" id="signUser">
+                    <input type="email" placeholder="Email" id="signEmail">
+                    <input type="password" placeholder="Password" id="signPass">
+
+                    <button class="btn btn-blue" onclick="signUpUser()">Create Account</button>
+
+                    <div class="switch-text">
+                        Already have an account?
+                        <span onclick="showScreen('login')">Login here</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- LOGIN PAGE -->
+        <div id="login" class="screen">
+            <div class="back-row">
+                <button class="small-btn btn-gray" onclick="showScreen('signin')">Back</button>
+            </div>
+
+            <div class="grid-2 one-col">
+                <div class="card">
+                    <div class="center">
+                        <div class="emoji">🔐</div>
+                        <div class="title">Login</div>
+                        <div class="subtitle">Login to continue your game journey</div>
+                    </div>
+
+                    <input type="email" placeholder="Email" id="loginEmail">
+                    <input type="password" placeholder="Password" id="loginPass">
+
+                    <button class="btn btn-green" onclick="loginUser()">Login</button>
+
+                    <div class="switch-text">
+                        Don’t have an account?
+                        <span onclick="showScreen('signin')">Create one</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HOME PAGE -->
+        <div id="home" class="screen">
+            <div class="back-row">
+                <button class="small-btn btn-gray" onclick="showScreen('login')">Back</button>
+            </div>
+
+            <div class="card">
+                <div class="character">
+                    <img src="assets/marion.jpg" alt="Mario Character">
+                </div>
+                <div class="title">Welcome Back</div>
+                <div class="small-text">Tap to start</div>
+
+                <div class="action-buttons one-col">
+                    <button class="btn btn-purple" onclick="startGame()">START GAME</button>
+                    <button class="btn btn-blue" onclick="toggleScoreHistory()">SHOW SCORE HISTORY</button>
+                </div>
+
+                <div id="scoreHistoryBox" class="history-box">
+                    <div class="history-title">Score History</div>
+                    <div id="historyList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RESULTS PAGE -->
+        <div id="results" class="screen">
+            <div class="back-row">
+                <button class="small-btn btn-gray" onclick="showScreen('home')">Back</button>
+            </div>
+
+            <div class="result-card">
+                <div class="emoji">🎉</div>
+                <div class="title">Great Job</div>
+
+                <div class="score-row"><span>Your Score</span><strong id="currentScore"></strong></div>
+                <div class="score-row"><span>Correct Gestures</span><strong>17/20</strong></div>
+                <div class="score-row"><span>Accuracy</span><strong>85%</strong></div>
+                <div class="score-row"><span>Average Confidence</span><strong>0.90</strong></div>
+                <div class="score-row"><span>Average Reaction Time</span><strong>1.6 sec</strong></div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-pink" onclick="showScreen('home')">Play Again</button>
+                    <button class="btn btn-purple" onclick="showAllHistory()">View All Games</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+
+</html>
