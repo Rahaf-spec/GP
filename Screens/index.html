@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hand Game</title>
+    <title>Hand Hero - Numbers Island</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
@@ -17,7 +17,6 @@
             <div class="logo">🖐️</div>
         </div>
 
-        <!-- SIGN UP PAGE -->
         <div id="signin" class="screen active">
             <div class="grid-2 one-col">
                 <div class="card">
@@ -42,7 +41,6 @@
             </div>
         </div>
 
-        <!-- LOGIN PAGE -->
         <div id="login" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('signin')">Back</button>
@@ -69,7 +67,6 @@
             </div>
         </div>
 
-        <!-- HOME PAGE -->
         <div id="home" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('login')">Back</button>
@@ -94,24 +91,34 @@
             </div>
         </div>
 
-        <!-- RESULTS PAGE -->
         <div id="results" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('home')">Back</button>
             </div>
-
+//⭐⭐⭐⭐⭐⭐
             <div class="result-card">
                 <div class="emoji">🎉</div>
                 <div class="title">Great Job</div>
 
-                <div class="score-row"><span>Your Score</span><strong id="currentScore"></strong></div>
-                <div class="score-row"><span>Correct Gestures</span><strong>17/20</strong></div>
-                <div class="score-row"><span>Accuracy</span><strong>85%</strong></div>
-                <div class="score-row"><span>Average Confidence</span><strong>0.90</strong></div>
-                <div class="score-row"><span>Average Reaction Time</span><strong>1.6 sec</strong></div>
+                <div class="score-row">
+                    <span>Correct Gestures</span>
+                    <strong id="display-correct">--</strong>
+                </div>
+                <div class="score-row">
+                    <span>Accuracy</span>
+                    <strong id="display-accuracy">--</strong>
+                </div>
+                <div class="score-row">
+                    <span>Average Confidence</span>
+                    <strong id="display-confidence">--</strong>
+                </div>
+                <div class="score-row">
+                    <span>Average Reaction Time</span>
+                    <strong id="display-time">--</strong>
+                </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-pink" onclick="showScreen('home')">Play Again</button>
+                    <button class="btn btn-pink" onclick="startGame()">Play Again</button>
                     <button class="btn btn-purple" onclick="showAllHistory()">View All Games</button>
                 </div>
             </div>

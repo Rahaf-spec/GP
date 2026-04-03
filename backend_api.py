@@ -30,7 +30,6 @@ app.add_middleware(
 
 model = models.resnet18(pretrained=False)
 
-#  (2 trained classes)
 model.fc = nn.Sequential(
     nn.Linear(model.fc.in_features, 256),
     nn.ReLU(),
@@ -52,19 +51,29 @@ transform = transforms.Compose([
     )
 ])
 
-# ------------------ CAMERA ------------------
+# ------------------ CAMERA CONTROL ------------------
 
 cap = cv2.VideoCapture(1)
+
+camera_running = False   # ⭐⭐⭐⭐⭐⭐
 
 latest_prediction = {
     "gesture": "NoHand",
     "confidence": 0.0
 }
 
+# ------------------ CAMERA LOOP ------------------
+
 def camera_loop():
-    global latest_prediction
+    global latest_prediction, camera_running
 
     while True:
+
+        # ⭐⭐⭐⭐⭐⭐ إذا الكاميرا مو شغالة لا تسوي شيء
+        if not camera_running:
+            time.sleep(0.1)
+            continue
+
         ret, frame = cap.read()
         if not ret:
             continue
@@ -99,8 +108,49 @@ threading.Thread(target=camera_loop, daemon=True).start()
 def get_gesture():
     return JSONResponse(latest_prediction)
 
+# ⭐⭐⭐⭐⭐⭐ تشغيل الكاميرا
+@app.get("/start")
+def start_camera():
+    global cap, camera_running
+    
+    # ⭐⭐⭐⭐⭐⭐ إذا كانت الكاميرا تعمل فعلياً، لا تفعل شيئاً
+    if camera_running and cap is not None and cap.isOpened():
+        return {"status": "camera already running"}
+    
+    # ⭐⭐⭐⭐⭐⭐ إعادة تهيئة الكاميرا
+    cap = cv2.VideoCapture(1) 
+    
+    if not cap.isOpened():
+        return {"status": "error", "message": "Could not open video device"}
+    
+    camera_running = True
+    
+    return {"status": "camera started and initialized"}
+
+# ⭐⭐⭐⭐⭐⭐ إيقاف الكاميرا
+@app.get("/stop")
+def stop_camera():
+    global camera_running, cap
+    camera_running = False
+    
+    if cap is not None:
+        cap.release()    # ⭐⭐⭐⭐⭐⭐ هذا السطر الذي يطفئ الكاميرا فعلياً
+        cap = None       # إعادة التعيين لضمان إمكانية فتحها مرة أخرى لاحقاً
+        cv2.destroyAllWindows() # إغلاق أي نافذة عرض من OpenCV
+        
+    print("Camera has been released successfully")
+    return {"status": "camera stopped"}
+
+# ------------------ VIDEO STREAM ------------------
+
 def generate_frames():
     while True:
+
+        # ⭐⭐⭐⭐⭐⭐ إذا الكاميرا مو شغالة لا تبث
+        if not camera_running:
+            time.sleep(0.1)
+            continue
+
         ret, frame = cap.read()
         if not ret:
             continue
