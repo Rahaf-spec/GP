@@ -27,7 +27,7 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         console.log("User is signed in:", user.email);
         loadUserScores(); // تحميل البيانات بمجرد التأكد من الهوية
-        
+
         // التحقق إذا كنا عائدين من اللعبة لفتح شاشة النتائج فوراً
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.get('status') === 'gameover') {
@@ -47,47 +47,50 @@ function showScreen(screenId) {
     if (screenId === 'home') renderHistory();
     if (screenId === 'results') updateResults();
 }
+
 // ⭐⭐⭐⭐⭐⭐ لايقاف الكاميرا بعد الانتهاء من اللعبة
 async function stopCamera() {
     try {
         console.log("Stopping camera...");
-        await fetch("http://127.0.0.1:8000/stop"); 
+        await fetch("http://127.0.0.1:8000/stop");
     } catch (error) {
         console.error("Error stopping camera:", error);
     }
 }
+
 //⭐⭐⭐⭐⭐⭐ معالجة نتائج اللعبة القادمة من Phaser 
 function updateResults() {
-    
+
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     if (urlParams.get('status') === 'gameover') {
         // ⭐⭐⭐⭐⭐⭐ استلام البيانات من الرابط
         const gameData = {
-            correct: urlParams.get('correct') || "0/0",
-            acc: urlParams.get('acc') || "0",
-            conf: urlParams.get('conf') || "0.00",
-            time: urlParams.get('time') || "0.00"
+            correctGestures: urlParams.get('correct') || "0/0",
+            accuracy: urlParams.get('acc') || "0",
+            averageConfidence: urlParams.get('conf') || "0.00",
+            averageReactionTime: urlParams.get('time') || "0.00"
         };
 
         // ⭐⭐⭐⭐⭐⭐ تحديث واجهة الـ HTML
         if (document.getElementById('display-correct')) {
-            document.getElementById('display-correct').innerText = gameData.correct;
-            document.getElementById('display-accuracy').innerText = gameData.acc + "%";
-            document.getElementById('display-confidence').innerText = gameData.conf;
-            document.getElementById('display-time').innerText = gameData.time + " sec";
+            document.getElementById('display-correct').innerText = gameData.correctGestures;
+            document.getElementById('display-accuracy').innerText = gameData.accuracy + "%";
+            document.getElementById('display-confidence').innerText = gameData.averageConfidence;
+            document.getElementById('display-time').innerText = gameData.averageReactionTime + " sec";
         }
 
-        // ⭐⭐⭐⭐⭐⭐ حفظ النتيجة في Firebase (إذا لم تكن قد حُفظت بالفعل في هذه الجلسة)
+        // ⭐⭐⭐⭐⭐⭐ حفظ النتيجة في Firebase
         if (currentUser) {
-            saveScoreToFirebase(gameData.acc, gameData);
+            saveScoreToFirebase(gameData.accuracy, gameData);
         }
+
         stopCamera();
+
         // ⭐⭐⭐⭐⭐⭐ تنظيف الرابط لجمالية الموقع 
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
-
 
 async function signUpUser() {
     const name = document.getElementById('signName').value.trim();
@@ -133,10 +136,16 @@ async function saveScoreToFirebase(scoreValue, details) {
         const newScoreRef = push(scoresRef);
 
         await set(newScoreRef, {
-            score: scoreValue, // نخزن الدقة كـ Score أساسي
-            details: details,  // نخزن كامل التفاصيل (ثقة، سرعة، الخ)
+            score: scoreValue,
+            details: {
+                correctGestures: details.correctGestures,
+                accuracy: details.accuracy,
+                averageConfidence: details.averageConfidence,
+                averageReactionTime: details.averageReactionTime
+            },
             createdAt: Date.now()
         });
+
         console.log("Score saved to Firebase!");
     } catch (error) {
         console.error("Error saving score:", error);
@@ -145,19 +154,20 @@ async function saveScoreToFirebase(scoreValue, details) {
 
 async function loadUserScores() {
     if (!currentUser) return;
+
     try {
         const snapshot = await get(ref(db, `scores/${currentUser.uid}`));
         scores.allHistory = [];
-        
+
         if (snapshot.exists()) {
             const data = snapshot.val();
             const loadedScores = Object.values(data).sort((a, b) => a.createdAt - b.createdAt);
-            loadedScores.forEach(item => scores.allHistory.push(item.score));
+            loadedScores.forEach(item => scores.allHistory.push(item));
         }
 
-        scores.history = scores.allHistory.slice(-5);
-        scores.current = scores.allHistory.length > 0 ? scores.allHistory[scores.allHistory.length - 1] : 0;
-        
+        scores.history = scores.allHistory.slice(-5).map(item => item.score);
+        scores.current = scores.allHistory.length > 0 ? scores.allHistory[scores.allHistory.length - 1].score : 0;
+
         renderHistory();
     } catch (error) {
         console.error("Error loading scores:", error);
@@ -176,7 +186,6 @@ async function startGame() {
 
     await fetch("http://127.0.0.1:8000/start");
 
-    // ننتظر ثانية عشان الكاميرا تشتغل
     setTimeout(() => {
         window.location.href = "game/game.html";
     }, 1000);
@@ -212,27 +221,54 @@ function toggleScoreHistory() {
 }
 
 function showAllHistory() {
-    let container = document.querySelector(".result-card .history-box");
+    let container = document.querySelector("#home .all-games-box");
     if (container) { container.remove(); return; }
 
     container = document.createElement("div");
-    container.className = "history-box";
+    container.className = "history-box all-games-box";
     container.style.display = "block";
 
     if (scores.allHistory.length === 0) {
         container.innerHTML = `<div class="empty-history">No games played yet 🎮</div>`;
     } else {
         const reversed = [...scores.allHistory].reverse();
-        container.innerHTML = reversed.map((score, index) => `
+        container.innerHTML = reversed.map((item, index) => `
             <div class="history-item">
-                <span>Game ${scores.allHistory.length - index}</span>
-                <strong>${score}%</strong>
+                <div><strong>Game ${scores.allHistory.length - index}</strong></div>
+                <div><strong>Score:</strong> ${item.score}%</div>
+                <div><strong>Correct Gestures:</strong> ${item.details?.correctGestures || "--"}</div>
+                <div><strong>Accuracy:</strong> ${item.details?.accuracy || "--"}%</div>
+                <div><strong>Average Confidence:</strong> ${item.details?.averageConfidence || "--"}</div>
+                <div><strong>Average Reaction Time:</strong> ${item.details?.averageReactionTime || "--"} sec</div>
             </div>
         `).join("");
     }
-    document.querySelector(".result-card").appendChild(container);
+
+    document.querySelector("#home .card").appendChild(container);
 }
 
+async function saveCurrentGameResult(correctGestures, accuracy, averageConfidence, averageReactionTime) {
+    if (!currentUser) return;
+    document.getElementById("display-correct").textContent =
+        (correctGestures != null && correctGestures !== "") ? correctGestures : "--";
+
+    document.getElementById("display-accuracy").textContent =
+        accuracy != null ? `${accuracy}%` : "--";
+
+    document.getElementById("display-confidence").textContent =
+        (averageConfidence != null && averageConfidence !== "") ? averageConfidence : "--";
+
+    document.getElementById("display-time").textContent =
+        averageReactionTime != null ? `${averageReactionTime} sec` : "--";
+    await saveScoreToFirebase(accuracy, {
+        correctGestures: correctGestures,
+        accuracy: accuracy,
+        averageConfidence: averageConfidence,
+        averageReactionTime: averageReactionTime
+    });
+
+    await loadUserScores();
+}
 
 window.showScreen = showScreen;
 window.signUpUser = signUpUser;
@@ -240,3 +276,4 @@ window.loginUser = loginUser;
 window.startGame = startGame;
 window.toggleScoreHistory = toggleScoreHistory;
 window.showAllHistory = showAllHistory;
+window.saveCurrentGameResult = saveCurrentGameResult;

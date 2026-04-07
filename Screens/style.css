@@ -334,3 +334,31 @@ input:focus {
         width: 95px;
     }
 }
+
+.result-card .history-item {
+    display: block;
+    text-align: left;
+}
+
+.result-card .history-item div {
+    margin-bottom: 6px;
+}
+
+.all-games-box .history-item {
+    background: #f8fafc;
+    padding: 16px 18px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    display: block;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    line-height: 1.7;
+    text-align: left;
+}
+
+.all-games-box .history-item div {
+    margin-bottom: 4px;
+}
+
+.all-games-box .history-item div:last-child {
+    margin-bottom: 0;
+}
