@@ -53,7 +53,7 @@ transform = transforms.Compose([
 
 # ------------------ CAMERA CONTROL ------------------
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 camera_running = False   # ⭐⭐⭐⭐⭐⭐
 
@@ -118,7 +118,7 @@ def start_camera():
         return {"status": "camera already running"}
     
     # ⭐⭐⭐⭐⭐⭐ إعادة تهيئة الكاميرا
-    cap = cv2.VideoCapture(0) 
+    cap = cv2.VideoCapture(1) 
     
     if not cap.isOpened():
         return {"status": "error", "message": "Could not open video device"}

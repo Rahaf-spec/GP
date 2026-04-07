@@ -746,20 +746,27 @@ function raiseFlag() {
 }
 
 function showResults(scene) {
+
     const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
     const avgConfidence = confidenceCount > 0 ? (confidenceSum / confidenceCount).toFixed(2) : "0.00";
     const avgReaction = reactionTimes.length > 0 ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2) : "0.00";
-
-    const bg = scene.add.rectangle(screenWidth / 2, screenHeight / 2, 700, 450, 0x000000, 0.85);
-    bg.setScrollFactor(0).depth = 200;
-
-    scene.add.text(screenWidth / 2, screenHeight / 2 - 150, " Session Complete!", { fontSize: "40px", fill: "#111fe0" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
-    scene.add.text(screenWidth / 2, screenHeight / 2 - 50, `Correct Commands: ${correctGestures} / ${totalCommands}`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
-    scene.add.text(screenWidth / 2, screenHeight / 2, `Accuracy: ${accuracy}%`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
-    scene.add.text(screenWidth / 2, screenHeight / 2 + 50, `Average AI Confidence: ${avgConfidence}`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
-    scene.add.text(screenWidth / 2, screenHeight / 2 + 100, `Avg Reaction Time: ${avgReaction} sec`, { fontSize: "28px", fill: "#ffffff" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    //⭐⭐⭐⭐⭐⭐
     
-    scene.add.text(screenWidth / 2, screenHeight / 2 + 150, `Wrong Moves (Falls/Hits): ${wrongMoves}`, { fontSize: "28px", fill: "#ff4444" }).setOrigin(0.5).setScrollFactor(0).depth = 201;
+    setTimeout(() => {
+        // تحديد رابط صفحة الموقع الرئيسية ⭐⭐⭐⭐⭐⭐
+        const baseUrl = "../index.html"; // النقطتان تعني الخروج للمجلد الأب ⭐⭐⭐⭐⭐⭐
+    
+        const params = new URLSearchParams({
+        status: "gameover",
+        correct: `${correctGestures}/${totalCommands}`,
+        acc: accuracy,
+        conf: avgConfidence,
+        time: avgReaction
+    });
+
+    window.location.href = baseUrl + "?" + params.toString();
+    }, 2000); // 2000 ميلي ثانية تعني ثانيتين
+    
 }
 
 function consumeMushroom(player, mushroom) {

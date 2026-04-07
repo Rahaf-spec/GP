@@ -1,15 +1,11 @@
-
 function createPlayer() {
     // Draw player
     player = this.physics.add.sprite( /*screenWidth * 1.5*/ startOffset, screenHeight - platformHeight, 'mario').setOrigin(1).setBounce(0)
     .setCollideWorldBounds(true).setScale(screenHeight / 376);
     player.depth = 3;
-    /*this.cameras.main.startFollow(player);
-    playerState = 2;*/
 }
 
 function decreasePlayerState() {
-
     if (playerState <= 0) {
         gameOver = true;
         gameOverFunc.call(this);
@@ -97,8 +93,8 @@ function updatePlayer(delta) {
     if (player.body.blocked.left || player.body.blocked.right)
         player.setVelocityX(0);
 
-    // Check if player has fallen
-    if (player.y > screenHeight - 10 || timeLeft <= 0) {
+    // MODIFIED: Removed the "fall off map = game over" trigger. It is now handled in game.js
+    if (timeLeft <= 0) {
         gameOver = true;
         gameOverFunc.call(this);
         return;
@@ -106,10 +102,6 @@ function updatePlayer(delta) {
 
     if (playerBlocked)
         return;
-
-    // Player controls
-    // https://github.com/photonstorm/phaser3-examples/blob/master/public/src/tilemap/collision/matter%20destroy%20tile%20bodies.js#L323
-    // https://codepen.io/rexrainbow/pen/oyqvQY
 
     // > Vertical movement
     if ((controlKeys.JUMP.isDown || this.joyStick.up) && player.body.touching.down) {
@@ -137,8 +129,6 @@ function updatePlayer(delta) {
 
         playerController.direction.positive = false;
         
-        // Lerp the velocity towards the max run using the smoothed controls.
-        // This simulates a player controlled acceleration.
         oldVelocityX = player.body.velocity.x;
         targetVelocityX = -playerController.speed.run;
         newVelocityX = Phaser.Math.Linear(oldVelocityX, targetVelocityX, -smoothedControls.value);
@@ -159,8 +149,6 @@ function updatePlayer(delta) {
 
         playerController.direction.positive = true;
 
-        // Lerp the velocity towards the max run using the smoothed controls.
-        // This simulates a player controlled acceleration.
         oldVelocityX = player.body.velocity.x;
         targetVelocityX = playerController.speed.run;
         newVelocityX = Phaser.Math.Linear(oldVelocityX, targetVelocityX, smoothedControls.value);

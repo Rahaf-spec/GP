@@ -1,6 +1,7 @@
 // ---------------- PERFORMANCE METRICS ----------------
 let totalCommands = 0;
 let correctGestures = 0;
+let wrongMoves = 0; 
 
 let commandStartTime = 0;
 let currentCommand = null;
@@ -22,14 +23,14 @@ const mobileDevice = isMobileDevice();
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight * 1.1;
 
-const velocityX = screenWidth / 4.5;
-const velocityY = screenHeight / 1.15;
+const velocityX = screenWidth / 9;
+const velocityY = screenHeight / 0.9;
 
 const levelGravity = velocityY * 2;
 
-// Accessibility: Adjust these to make it easier for the kids
-const KIDS_SPEED_MULTIPLIER = 0.5; // Slows Mario down to 50% speed
-const WARNING_DISTANCE = screenWidth * 0.4; // Triggers the jump command early
+// Accessibility
+const KIDS_SPEED_MULTIPLIER = 1; 
+const WARNING_DISTANCE = screenWidth * 0.4; 
 
 var config = {
     type: Phaser.AUTO,
@@ -110,12 +111,9 @@ function fetchGesture() {
             aiGesture = data.gesture;
             aiConfidence = data.confidence;
         })
-        .catch(err => {
-            // Silently fail if backend isn't reachable yet
-        });
+        .catch(err => {});
 }
 
-// Call the backend every 100ms
 setInterval(fetchGesture, 100);
 
 // ---------------- PHASER CORE FUNCTIONS ----------------
@@ -746,6 +744,7 @@ function raiseFlag() {
 
     return false;
 }
+
 function showResults(scene) {
 
     const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
@@ -868,14 +867,24 @@ function registerCorrectGesture(scene) {
 function update(delta) {
     if (gameOver || gameWinned || !player || playerBlocked) return;
     
-    if (player.y > screenHeight) {
-    this.powerDownSound.play();
-    playerBlocked = true;
-    gameOver = true;
-    this.scene.restart();
-    return;
-}
-
+    // تعديل: نحسب الطيحة هنا إذا لمس الأرض السفلية، بدال ما تخسره اللعبة
+    if (player.y >= screenHeight - 5) {
+        wrongMoves++; 
+        this.powerDownSound.play();
+        
+        player.y = screenHeight / 3;
+        player.x = Math.max(screenWidth, player.x - 250); 
+        player.setVelocityY(0);
+        player.setVelocityX(0);
+        
+        // نلغي النقطة عشان ما تنحسب 11/11
+        commandActive = false; 
+        this.commandText.setText("Missed!");
+        
+        if(typeof applyPlayerInvulnerability === "function") applyPlayerInvulnerability.call(this, 2000);
+        
+        return;
+    }
 
     // --- 1. PROXIMITY SCANNER (HOLES) ---
     let closestObstacleDist = Infinity;
@@ -904,55 +913,54 @@ function update(delta) {
 
    // --- 2. AI MOVEMENT EXECUTION ---
 
-// If confidence is too low, treat it as NoHand only for safety
-if (aiConfidence < 0.70) {
-    aiGesture = "NoHand";
-}
-
-const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
-const JUMP_POWER = velocityY * 1.1;
-
-if (aiGesture === "Open") {
-    player.setVelocityX(RUN_SPEED);
-    player.flipX = false;
-
-    player.anims.play(
-        playerState > 0
-            ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run')
-            : 'run',
-        true
-    );
-
-    if (commandActive && currentCommand === "Open") {
-        registerCorrectGesture(this);
+    // If confidence is too low, treat it as NoHand only for safety
+    if (aiConfidence < 0.70) {
+        aiGesture = "NoHand";
     }
-}
-else if (aiGesture === "Close") {
 
-    // KEEP running speed while jumping
-    player.setVelocityX(RUN_SPEED);
+    const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
+    const JUMP_POWER = velocityY * 1.3;
 
-    if (player.body.blocked.down) {
-        player.setVelocityY(-JUMP_POWER);
-        this.jumpSound.play();
+    if (aiGesture === "Open") {
+        player.setVelocityX(RUN_SPEED);
+        player.flipX = false;
 
-        if (commandActive && currentCommand === "Close") {
+        player.anims.play(
+            playerState > 0
+                ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run')
+                : 'run',
+            true
+        );
+
+        if (commandActive && currentCommand === "Open") {
             registerCorrectGesture(this);
         }
     }
-}
+    else if (aiGesture === "Close") {
 
-else {
-    player.setVelocityX(0);
+        // KEEP running speed while jumping
+        player.setVelocityX(RUN_SPEED * 1.5);
 
-    player.anims.play(
-        playerState > 0
-            ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle')
-            : 'idle',
-        true
-    );
-}
+        if (player.body.blocked.down) {
+            player.setVelocityY(-JUMP_POWER);
+            this.jumpSound.play();
 
+            if (commandActive && currentCommand === "Close") {
+                registerCorrectGesture(this);
+            }
+        }
+    }
+
+    else {
+        player.setVelocityX(0);
+
+        player.anims.play(
+            playerState > 0
+                ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle')
+                : 'idle',
+            true
+        );
+    }
 
     // --- 3. CAMERA LOGIC ---
     const playerVelocityX = player.body.velocity.x;
