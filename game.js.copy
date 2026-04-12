@@ -162,7 +162,7 @@ function preload() {
     percentText.setOrigin(0.5, 0.5);
     
     this.load.on('progress', function (value) {
-        percentText.setText(value * 99 >= 99 ? 'Generating world...' : 'Loading... ' + parseInt(value * 99) + '%');
+        percentText.setText(value * 99 >= 99 ? 'جاري بناء المرحلة..' : 'جاري التحميل ' + parseInt(value * 99) + '%');
         progressBar.clear();
         progressBar.fillStyle(0xffffff, 1);
         progressBar.fillRoundedRect(screenWidth / 2.45, screenHeight / 2 * 1.07, screenWidth / 5.6 * value, screenHeight / 34.5, 5);
@@ -318,7 +318,7 @@ function initSounds() {
 }
 
 function create() {
-    this.commandText = this.add.text(screenWidth / 2, 80, "Game Starting...", {
+    this.commandText = this.add.text(screenWidth / 2, 80, "اللعبة تبدأ...", {
         fontSize: "36px",
         fill: "#ffffff",
         backgroundColor: "#000000",
@@ -612,7 +612,7 @@ function startLevel(player, trigger) {
         levelStarted = true;
         
         // Initial command once they land
-        this.commandText.setText("🟢 OPEN hand to RUN 🟢");
+        this.commandText.setText("🟢 افتح يدك للركض 🟢");
 
         if (this.settingsMenuOpen)hideSettings.call(this);
     }, 1100);
@@ -712,7 +712,7 @@ function drawStartScreen() {
 function raiseFlag() {
     if (flagRaised) { return false; }
     
-    this.commandText.setText("Goal Reached!");
+    this.commandText.setText("🎉 مبروك! وصلت للهدف! 🎉");
     
     this.cameras.main.stopFollow();
     if(this.timeLeftText) this.timeLeftText.stopped = true;
@@ -861,7 +861,7 @@ function registerCorrectGesture(scene) {
     confidenceCount++;
     
     commandActive = false;
-    scene.commandText.setText("Great Job!");
+    scene.commandText.setText("🌟 عمل رائع! 🌟");
 }
 
 function update(delta) {
@@ -879,7 +879,7 @@ function update(delta) {
         
         // نلغي النقطة عشان ما تنحسب 11/11
         commandActive = false; 
-        this.commandText.setText("Missed!");
+        this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌");
         
         if(typeof applyPlayerInvulnerability === "function") applyPlayerInvulnerability.call(this, 2000);
         
@@ -898,7 +898,7 @@ function update(delta) {
                 closestObstacleDist = dist;
                 
                 if (lastObstacleX !== hole.start && !commandActive) {
-                    triggerCommand(this, "Close", "⚠️ CLOSE hand to JUMP! ⚠️");
+                    triggerCommand(this, "Close", "⚠️ اقفل يدك للقفز ⚠️");
                     lastObstacleX = hole.start; // Mark hole as warned
                 }
                 break; 
@@ -907,7 +907,7 @@ function update(delta) {
 
         // If path is clear, prompt Open command
         if (closestObstacleDist === Infinity && !commandActive && currentCommand !== "Open") {
-            triggerCommand(this, "Open", "🟢 OPEN hand to RUN 🟢");
+            triggerCommand(this, "Open", "🟢 افتح يدك للركض 🟢");
         }
     }
 
