@@ -939,7 +939,7 @@ function update(delta) {
     else if (aiGesture === "Close") {
 
         // KEEP running speed while jumping
-        player.setVelocityX(RUN_SPEED * 1.5);
+        player.setVelocityX(RUN_SPEED * 1.8);
 
         if (player.body.blocked.down) {
             player.setVelocityY(-JUMP_POWER);
