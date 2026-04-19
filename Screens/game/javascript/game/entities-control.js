@@ -1,6 +1,12 @@
 const goombasVelocityX = screenWidth / 19
 
 function createGoombas() {
+    // 🌟 MODIFIED: Prevent enemies from spawning in Tutorial Mode
+    if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
+        this.goombasGroup = this.add.group(); // Create empty group to avoid errors
+        return; 
+    }
+
     this.goombasGroup = this.add.group();
 
     for (i = 0; i < Math.trunc(worldWidth / 3000); i++) {
@@ -78,7 +84,7 @@ function checkGoombaCollision(player, goomba) {
     // الغاء التعليمة عشان ما تنحسب نقطة صحيحة للطفل وهو صادم
     if (typeof commandActive !== 'undefined') {
         commandActive = false; 
-        if (this.commandText) this.commandText.setText("Missed!");
+        if (this.commandText) this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌"); // 🌟 MODIFIED: Arabic Text
     }
         
     return;

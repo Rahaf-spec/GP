@@ -1,3 +1,7 @@
+// 🌟 MODIFIED: Read URL to check if we are in Tutorial Mode
+const urlParams = new URLSearchParams(window.location.search);
+const isTutorialMode = urlParams.get('mode') === 'tutorial';
+
 // ---------------- PERFORMANCE METRICS ----------------
 let totalCommands = 0;
 let correctGestures = 0;
@@ -32,6 +36,10 @@ const levelGravity = velocityY * 2;
 const KIDS_SPEED_MULTIPLIER = 1; 
 const WARNING_DISTANCE = screenWidth * 0.4; 
 
+// 🌟 MODIFIED: Added gamePaused variable
+var gamePaused = false;
+var pauseText;
+
 var config = {
     type: Phaser.AUTO,
     width: screenWidth,
@@ -52,15 +60,15 @@ var config = {
         create: create,
         update: update
     },
-    version: '0.7.3'
+    version: '0.7.4' // Updated version
 };
 
-const worldWidth = screenWidth * 11;
+const platformPieces = isTutorialMode ? 30 : 100; 
+const worldWidth = screenWidth * (isTutorialMode ? 4 : 11); 
 const platformHeight = screenHeight / 5;
 
 const startOffset = screenWidth / 2.5;
 
-const platformPieces = 100;
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
 
 var isLevelOverworld;
@@ -105,6 +113,9 @@ function isMobileDevice() {
 
 // ---------------- BACKEND GESTURE FETCH ----------------
 function fetchGesture() {
+    // 🌟 MODIFIED: Don't fetch if game is paused to save resources
+    if (gamePaused) return;
+
     fetch("http://127.0.0.1:8000/gesture")
         .then(response => response.json())
         .then(data => {
@@ -115,6 +126,40 @@ function fetchGesture() {
 }
 
 setInterval(fetchGesture, 100);
+
+// ---------------- PAUSE LOGIC ----------------
+
+// 🌟 MODIFIED: Function to toggle Pause
+function togglePause() {
+    if (gameOver || gameWinned || !levelStarted) return;
+
+    gamePaused = !gamePaused;
+
+    if (gamePaused) {
+        // Pause physics and animations
+        this.physics.pause();
+        this.anims.pauseAll();
+        this.pauseSound.play();
+        
+        // Show Pause UI
+        pauseText.setVisible(true);
+        this.commandText.setText("⏸️ اللعبة متوقفة ⏸️");
+        
+        // Gray out the screen slightly
+        this.pauseOverlay = this.add.rectangle(0, 0, worldWidth, screenHeight, 0x000000, 0.3)
+            .setOrigin(0).setScrollFactor(0).setDepth(2000);
+    } else {
+        // Resume everything
+        this.physics.resume();
+        this.anims.resumeAll();
+        this.pauseSound.play();
+        
+        // Hide Pause UI
+        pauseText.setVisible(false);
+        if (this.pauseOverlay) this.pauseOverlay.destroy();
+        this.commandText.setText(currentCommand === "Close" ? "⚠️ اقبض يدك للقفز ⚠️" : "🟢 افتح يدك للركض 🟢");
+    }
+}
 
 // ---------------- PHASER CORE FUNCTIONS ----------------
 
@@ -318,13 +363,24 @@ function initSounds() {
 }
 
 function create() {
-    this.commandText = this.add.text(screenWidth / 2, 80, "اللعبة تبدأ...", {
+    let startText = isTutorialMode ? "مرحلة التعليم..." : "اللعبة تبدأ...";
+
+    this.commandText = this.add.text(screenWidth / 2, 80, startText, {
         fontSize: "36px",
         fill: "#ffffff",
         backgroundColor: "#000000",
         padding: { x: 20, y: 10 }
     }).setOrigin(0.5).setScrollFactor(0); 
     this.commandText.depth = 1000;
+
+    // 🌟 MODIFIED: Created Pause Text (Hidden by default)
+    pauseText = this.add.text(screenWidth / 2, screenHeight / 2, "PAUSED\nاضغط ESC للاستمرار", {
+        fontSize: "48px",
+        fill: "#ffffff",
+        align: "center",
+        backgroundColor: "#ff0000",
+        padding: { x: 50, y: 20 }
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3000).setVisible(false);
 
     playerController = {
         time: { leftDown: 0, rightDown: 0 },
@@ -347,6 +403,11 @@ function create() {
     applySettings.call(this);
     
     smoothedControls = new SmoothedHorionztalControl(0.001);
+
+    // 🌟 MODIFIED: Add Keyboard Listener for Pause (ESC Key)
+    this.input.keyboard.on('keydown-ESC', () => {
+        togglePause.call(this);
+    });
 }
 
 function createControls() {
@@ -357,6 +418,11 @@ function createControls() {
         base: this.add.circle(0, 0, mobileDevice ? 75 : 0, 0x0000000, 0.05),
         thumb: this.add.circle(0, 0, mobileDevice ? 25 : 0, 0xcccccc, 0.2),
     });
+
+    // 🌟 MODIFIED: Add a physical Pause Button on the HUD
+    this.pauseButton = this.add.text(screenWidth - 100, 50, "⏸️", { fontSize: '50px' })
+        .setInteractive().setScrollFactor(0).setDepth(2000)
+        .on('pointerdown', () => togglePause.call(this));
 
     const keyNames = ['JUMP', 'DOWN', 'LEFT', 'RIGHT', 'FIRE', 'PAUSE'];
     const defaultCodes = [Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.D, Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.ESC];
@@ -460,8 +526,10 @@ function generateLevel() {
 
     for (i=0; i <= platformPieces; i++) {
         let number = Phaser.Math.Between(0, 100);
+        
+        let holeAvoidanceChance = isTutorialMode ? 80 : 0; 
 
-        if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= 0 || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
+        if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= holeAvoidanceChance || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
             lastWasHole--;
 
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
@@ -480,8 +548,7 @@ function generateLevel() {
                 lastWasStructure--;
             }
         } else {
-            worldHolesCoords.push({ start: pieceStart, 
-                end: pieceStart + platformPiecesWidth * 2});
+            worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
             
             lastWasHole = 2;
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
@@ -611,7 +678,6 @@ function startLevel(player, trigger) {
         this.startScreenTrigger.destroy();
         levelStarted = true;
         
-        // Initial command once they land
         this.commandText.setText("🟢 افتح يدك للركض 🟢");
 
         if (this.settingsMenuOpen)hideSettings.call(this);
@@ -737,36 +803,37 @@ function raiseFlag() {
 
     addToScore.call(this, 2000, player);
 
-    // Show AI metrics after celebration
     setTimeout(() => {
         showResults(this);
     }, 2500);
 
     return false;
 }
-
 function showResults(scene) {
-
+    
     const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
     const avgConfidence = confidenceCount > 0 ? (confidenceSum / confidenceCount).toFixed(2) : "0.00";
     const avgReaction = reactionTimes.length > 0 ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2) : "0.00";
-    //⭐⭐⭐⭐⭐⭐
-    
-    setTimeout(() => {
-        // تحديد رابط صفحة الموقع الرئيسية ⭐⭐⭐⭐⭐⭐
-        const baseUrl = "../index.html"; // النقطتان تعني الخروج للمجلد الأب ⭐⭐⭐⭐⭐⭐
-    
-        const params = new URLSearchParams({
-        status: "gameover",
-        correct: `${correctGestures}/${totalCommands}`,
-        acc: accuracy,
-        conf: avgConfidence,
-        time: avgReaction
-    });
 
-    window.location.href = baseUrl + "?" + params.toString();
-    }, 2000); // 2000 ميلي ثانية تعني ثانيتين
-    
+
+    //  التوجيه بعد ثانيتين
+    setTimeout(() => {
+        const baseUrl = "../index.html"; 
+        
+        if (isTutorialMode) {
+            // نرسل mode=finished_tutorial ليعرف الموقع أنه يجب إيقاف الكاميرا
+            window.location.href = baseUrl + "?mode=finished_tutorial";
+        } else {
+            const params = new URLSearchParams({
+                status: "gameover",
+                correct: `${correctGestures}/${totalCommands}`,
+                acc: accuracy,
+                conf: avgConfidence,
+                time: avgReaction
+            });
+            window.location.href = baseUrl + "?" + params.toString();
+        }
+    }, 2000);
 }
 
 function consumeMushroom(player, mushroom) {
@@ -865,9 +932,9 @@ function registerCorrectGesture(scene) {
 }
 
 function update(delta) {
-    if (gameOver || gameWinned || !player || playerBlocked) return;
+    // 🌟 MODIFIED: Stop the update loop if game is paused
+    if (gamePaused || gameOver || gameWinned || !player || playerBlocked) return;
     
-    // تعديل: نحسب الطيحة هنا إذا لمس الأرض السفلية، بدال ما تخسره اللعبة
     if (player.y >= screenHeight - 5) {
         wrongMoves++; 
         this.powerDownSound.play();
@@ -877,7 +944,6 @@ function update(delta) {
         player.setVelocityY(0);
         player.setVelocityX(0);
         
-        // نلغي النقطة عشان ما تنحسب 11/11
         commandActive = false; 
         this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌");
         
@@ -893,19 +959,17 @@ function update(delta) {
         for (let hole of worldHolesCoords) {
             let dist = hole.start - player.x;
             
-            // If hole is ahead and within warning distance
             if (dist > 0 && dist < WARNING_DISTANCE) {
                 closestObstacleDist = dist;
                 
                 if (lastObstacleX !== hole.start && !commandActive) {
-                    triggerCommand(this, "Close", "⚠️ اقفل يدك للقفز ⚠️");
-                    lastObstacleX = hole.start; // Mark hole as warned
+                    triggerCommand(this, "Close", "⚠️ اقبض يدك للقفز ⚠️");
+                    lastObstacleX = hole.start; 
                 }
                 break; 
             }
         }
 
-        // If path is clear, prompt Open command
         if (closestObstacleDist === Infinity && !commandActive && currentCommand !== "Open") {
             triggerCommand(this, "Open", "🟢 افتح يدك للركض 🟢");
         }
@@ -913,7 +977,6 @@ function update(delta) {
 
    // --- 2. AI MOVEMENT EXECUTION ---
 
-    // If confidence is too low, treat it as NoHand only for safety
     if (aiConfidence < 0.70) {
         aiGesture = "NoHand";
     }
@@ -937,8 +1000,6 @@ function update(delta) {
         }
     }
     else if (aiGesture === "Close") {
-
-        // KEEP running speed while jumping
         player.setVelocityX(RUN_SPEED * 1.8);
 
         if (player.body.blocked.down) {
@@ -950,7 +1011,6 @@ function update(delta) {
             }
         }
     }
-
     else {
         player.setVelocityX(0);
 

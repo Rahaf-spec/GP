@@ -23,19 +23,35 @@ let currentUser = null;
 
 //  ⭐⭐⭐⭐⭐⭐ مراقبة حالة المستخدم (ضروري عند العودة من اللعبة) 
 onAuthStateChanged(auth, (user) => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGameOver = urlParams.get('status') === 'gameover';
+    const isFinishedTutorial = urlParams.get('mode') === 'finished_tutorial';
+
     if (user) {
         currentUser = user;
         console.log("User is signed in:", user.email);
-        loadUserScores(); // تحميل البيانات بمجرد التأكد من الهوية
+        
+        // 1. تحميل البيانات من Firebase
+        loadUserScores(); 
 
-        // التحقق إذا كنا عائدين من اللعبة لفتح شاشة النتائج فوراً
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('status') === 'gameover') {
+        // 2. تحديد الشاشة التي يجب إظهارها
+        if (isGameOver) {
+            // إذا كان عائد بنتيجة، نفتح شاشة النتائج
             showScreen('results');
+        } else if (isFinishedTutorial) {
+            // إذا كان عائد من التتوريال، نفتح شاشة الهوم
+            showScreen('home');
+        } else {
+            // الحالة الافتراضية: إذا فتح الموقع وهو مسجل دخول، يذهب للهوم مباشرة
+            showScreen('home');
         }
+
     } else {
         currentUser = null;
         console.log("No user signed in.");
+        
+        // إذا لم يكن مسجلاً، نعيده لصفحة تسجيل الدخول
+        showScreen('signin');
     }
 });
 
@@ -60,11 +76,24 @@ async function stopCamera() {
 
 //⭐⭐⭐⭐⭐⭐ معالجة نتائج اللعبة القادمة من Phaser 
 function updateResults() {
-
     const urlParams = new URLSearchParams(window.location.search);
 
+    // 1. التعامل مع نهاية طور التعليم (Tutorial)
+    if (urlParams.get('mode') === 'finished_tutorial') {
+        // إيقاف الكاميرا فوراً
+        stopCamera();
+        
+        // التوجه لشاشة الهوم بدلاً من البقاء في شاشة الدخول
+        showScreen('home');
+
+        // تنظيف الرابط
+        window.history.replaceState({}, document.title, window.location.pathname);
+        return; // الخروج من الدالة لأننا لا نحتاج لحفظ بيانات
+    }
+
+    // 2. التعامل مع نهاية اللعبة العادية (Game Over)
     if (urlParams.get('status') === 'gameover') {
-        // ⭐⭐⭐⭐⭐⭐ استلام البيانات من الرابط
+        // استلام البيانات من الرابط
         const gameData = {
             correctGestures: urlParams.get('correct') || "0/0",
             accuracy: urlParams.get('acc') || "0",
@@ -72,7 +101,7 @@ function updateResults() {
             averageReactionTime: urlParams.get('time') || "0.00"
         };
 
-        // ⭐⭐⭐⭐⭐⭐ تحديث واجهة الـ HTML
+        // تحديث واجهة الـ HTML
         if (document.getElementById('display-correct')) {
             document.getElementById('display-correct').innerText = gameData.correctGestures;
             document.getElementById('display-accuracy').innerText = gameData.accuracy + "%";
@@ -80,14 +109,15 @@ function updateResults() {
             document.getElementById('display-time').innerText = gameData.averageReactionTime + " sec";
         }
 
-        // ⭐⭐⭐⭐⭐⭐ حفظ النتيجة في Firebase
+        // حفظ النتيجة في Firebase
         if (currentUser) {
             saveScoreToFirebase(gameData.accuracy, gameData);
         }
 
+        // إيقاف الكاميرا
         stopCamera();
 
-        // ⭐⭐⭐⭐⭐⭐ تنظيف الرابط لجمالية الموقع 
+        // تنظيف الرابط لجمالية الموقع 
         window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
@@ -188,6 +218,22 @@ async function startGame() {
 
     setTimeout(() => {
         window.location.href = "game/game.html";
+    }, 1000);
+}
+// دالة تشغيل طور التعليم
+window.startTutorial = async function() {
+    if (!currentUser) {
+        alert("Please login first");
+        showScreen('login');
+        return;
+    }
+
+    // تشغيل الكاميرا عبر البايثون كالمعتاد
+    await fetch("http://127.0.0.1:8000/start");
+
+    // التوجيه للعبة مع إرسال كلمة tutorial في الرابط
+    setTimeout(() => {
+        window.location.href = "game/game.html?mode=tutorial";
     }, 1000);
 }
 
