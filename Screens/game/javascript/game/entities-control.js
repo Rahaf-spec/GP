@@ -1,9 +1,8 @@
-const goombasVelocityX = screenWidth / 19
+const goombasVelocityX = screenWidth / 19;
 
 function createGoombas() {
-    // 🌟 MODIFIED: Prevent enemies from spawning in Tutorial Mode
     if (typeof isTutorialMode !== 'undefined' && isTutorialMode) {
-        this.goombasGroup = this.add.group(); // Create empty group to avoid errors
+        this.goombasGroup = this.add.group(); 
         return; 
     }
 
@@ -16,12 +15,13 @@ function createGoombas() {
         goomba.smoothed = true;
         goomba.depth = 2;
         if (Phaser.Math.Between(0, 10) <= 4) {
-            goomba.setVelocityX(goombasVelocityX)
+            goomba.setVelocityX(goombasVelocityX);
         } else {
-            goomba.setVelocityX(-goombasVelocityX)
+            goomba.setVelocityX(-goombasVelocityX);
         }
-        goomba.setMaxVelocity(goombasVelocityX, levelGravity)
+        goomba.setMaxVelocity(goombasVelocityX, levelGravity);
         this.goombasGroup.add(goomba);
+        
         let platformPieces = this.platformGroup.getChildren();
         this.physics.add.collider(goomba, platformPieces);
         let blocks = this.blocksGroup.getChildren();
@@ -31,6 +31,7 @@ function createGoombas() {
         let goombas = this.goombasGroup.getChildren();
         this.physics.add.collider(goomba, goombas);
         this.physics.add.collider(goomba, this.finalFlagMast);
+        
         this.physics.add.overlap(player, goomba, checkGoombaCollision, null, this);
     }
 
@@ -42,52 +43,38 @@ function createGoombas() {
 }
 
 function checkGoombaCollision(player, goomba) {
-
-    if (goomba.dead)
-        return;
+    if (goomba.dead || flagRaised) return;
     
     let goombaBeingStomped = player.body.touching.down && goomba.body.touching.up;
 
-    if (flagRaised)
-        return;
-
-    if (playerInvulnerable) {
-        if (!goombaBeingStomped) {
-            return;
-        }
-    }
-    
     if (goombaBeingStomped) {
+        goomba.dead = true;
         goomba.anims.play('goomba-hurt', true);
         goomba.body.enable = false;
         this.goombasGroup.remove(goomba);
         this.goombaStompSound.play();
         player.setVelocityY(-velocityY / 1.5);
-        addToScore.call(this, 100, goomba);
-        setTimeout(() => {
-            this.tweens.add({
-                targets: goomba,
-                duration: 300,
-                alpha: 0
-            });
-        }, 200);
-        setTimeout(() => {
-            goomba.destroy();
-        }, 500);
+        if(typeof addToScore === 'function') addToScore.call(this, 100, goomba);
+        
+        this.tweens.add({ targets: goomba, duration: 300, alpha: 0, onComplete: () => goomba.destroy() });
         return;
     }
     
-    if (typeof wrongMoves !== 'undefined') wrongMoves++;
-    this.powerDownSound.play();
-    applyPlayerInvulnerability.call(this, 2000); 
-    
-    // الغاء التعليمة عشان ما تنحسب نقطة صحيحة للطفل وهو صادم
-    if (typeof commandActive !== 'undefined') {
-        commandActive = false; 
-        if (this.commandText) this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌"); // 🌟 MODIFIED: Arabic Text
-    }
+    if (!playerInvulnerable) { 
+        wrongMoves++; 
+        this.powerDownSound.play();
         
-    return;
+        if(typeof applyPlayerInvulnerability === 'function') applyPlayerInvulnerability.call(this, 2000); 
+
+        if (typeof commandActive !== 'undefined') {
+            commandActive = false; 
+            if (this.commandText && this.commandBg) {
+                this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌"); 
+                // 🌟 Update rounded box design when text changes
+                if(typeof updateTextBg === 'function') updateTextBg(this.commandText, this.commandBg);
+            }
+        }
+    }
 }
 
 function clearGoombas() {

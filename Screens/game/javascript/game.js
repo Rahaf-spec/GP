@@ -3,22 +3,22 @@ const urlParams = new URLSearchParams(window.location.search);
 const isTutorialMode = urlParams.get('mode') === 'tutorial';
 
 // ---------------- PERFORMANCE METRICS ----------------
-let totalCommands = 0;
-let correctGestures = 0;
-let wrongMoves = 0; 
+var totalCommands = 0;
+var correctGestures = 0;
+var wrongMoves = 0; 
 
-let commandStartTime = 0;
-let currentCommand = null;
-let commandActive = false;
+var commandStartTime = 0;
+var currentCommand = null;
+var commandActive = false;
 
-let reactionTimes = [];
-let confidenceSum = 0;
-let confidenceCount = 0;
-let lastObstacleX = 0; 
+var reactionTimes = [];
+var confidenceSum = 0;
+var confidenceCount = 0;
+var lastObstacleX = 0; 
 
 // -------- AI GESTURE CONTROL --------
-let aiGesture = "NoHand";
-let aiConfidence = 0;
+var aiGesture = "NoHand";
+var aiConfidence = 0;
 
 // -------- GAME CONFIGURATION --------
 const loadingGif = document.querySelectorAll('.loading-gif');
@@ -32,11 +32,9 @@ const velocityY = screenHeight / 0.9;
 
 const levelGravity = velocityY * 2;
 
-// Accessibility
 const KIDS_SPEED_MULTIPLIER = 1; 
 const WARNING_DISTANCE = screenWidth * 0.4; 
 
-// 🌟 MODIFIED: Added gamePaused variable
 var gamePaused = false;
 var pauseText;
 
@@ -60,7 +58,7 @@ var config = {
         create: create,
         update: update
     },
-    version: '0.7.4' // Updated version
+    version: '0.7.7'
 };
 
 const platformPieces = isTutorialMode ? 30 : 100; 
@@ -68,7 +66,6 @@ const worldWidth = screenWidth * (isTutorialMode ? 4 : 11);
 const platformHeight = screenHeight / 5;
 
 const startOffset = screenWidth / 2.5;
-
 const platformPiecesWidth = (worldWidth - screenWidth) / platformPieces;
 
 var isLevelOverworld;
@@ -87,25 +84,38 @@ var furthestPlayerPos = 0;
 var flagRaised = false;
 
 var controlKeys = {
-    JUMP: null,
-    DOWN: null,
-    LEFT: null,
-    RIGHT: null,
-    FIRE: null,
-    PAUSE: null
+    JUMP: null, DOWN: null, LEFT: null, RIGHT: null, FIRE: null, PAUSE: null
 };
 
 var score = 0;
 var timeLeft = 300;
-
 var levelStarted = false;
 var reachedLevelEnd = false;
-
 var smoothedControls;
 var gameOver = false;
 var gameWinned = false;
 
 var game = new Phaser.Game(config);
+
+// 🌟 MODIFIED: Design B - Pure text style (Background is drawn with rounded edges separately)
+const marioTextStyle = {
+    fontFamily: '"Courier New", Courier, monospace',
+    fontSize: "36px",
+    fill: "#ffffff",
+    align: "center"
+};
+
+// 🌟 ADDED: Function to draw rounded boxes behind text
+function updateTextBg(textObj, bgObj) {
+    if (!textObj || !bgObj) return;
+    bgObj.clear();
+    bgObj.fillStyle(0xC48A48, 1); // Light Brown
+    bgObj.lineStyle(6, 0x5A3A22, 1); // Dark Brown Border
+    let b = textObj.getBounds();
+    // 20px Border Radius for Design B
+    bgObj.fillRoundedRect(b.x - 25, b.y - 15, b.width + 50, b.height + 30, 20);
+    bgObj.strokeRoundedRect(b.x - 25, b.y - 15, b.width + 50, b.height + 30, 20);
+}
 
 function isMobileDevice() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -113,7 +123,6 @@ function isMobileDevice() {
 
 // ---------------- BACKEND GESTURE FETCH ----------------
 function fetchGesture() {
-    // 🌟 MODIFIED: Don't fetch if game is paused to save resources
     if (gamePaused) return;
 
     fetch("http://127.0.0.1:8000/gesture")
@@ -125,44 +134,40 @@ function fetchGesture() {
         .catch(err => {});
 }
 
-setInterval(fetchGesture, 100);
+setInterval(fetchGesture, 600);
 
 // ---------------- PAUSE LOGIC ----------------
-
-// 🌟 MODIFIED: Function to toggle Pause
 function togglePause() {
     if (gameOver || gameWinned || !levelStarted) return;
 
     gamePaused = !gamePaused;
 
     if (gamePaused) {
-        // Pause physics and animations
         this.physics.pause();
         this.anims.pauseAll();
         this.pauseSound.play();
         
-        // Show Pause UI
         pauseText.setVisible(true);
+        this.pauseBg.setVisible(true);
         this.commandText.setText("⏸️ اللعبة متوقفة ⏸️");
+        updateTextBg(this.commandText, this.commandBg);
         
-        // Gray out the screen slightly
-        this.pauseOverlay = this.add.rectangle(0, 0, worldWidth, screenHeight, 0x000000, 0.3)
+        this.pauseOverlay = this.add.rectangle(0, 0, worldWidth, screenHeight, 0x000000, 0.4)
             .setOrigin(0).setScrollFactor(0).setDepth(2000);
     } else {
-        // Resume everything
         this.physics.resume();
         this.anims.resumeAll();
         this.pauseSound.play();
         
-        // Hide Pause UI
         pauseText.setVisible(false);
+        this.pauseBg.setVisible(false);
         if (this.pauseOverlay) this.pauseOverlay.destroy();
-        this.commandText.setText(currentCommand === "Close" ? "⚠️ اقبض يدك للقفز ⚠️" : "🟢 افتح يدك للركض 🟢");
+        this.commandText.setText(currentCommand === "Close" ? "⚠️ اغلق يدك للقفز ⚠️" : "🟢 افتح يدك للركض 🟢");
+        updateTextBg(this.commandText, this.commandBg);
     }
 }
 
 // ---------------- PHASER CORE FUNCTIONS ----------------
-
 var SmoothedHorionztalControl = new Phaser.Class({
     initialize:
     function SmoothedHorionztalControl(speed) {
@@ -199,10 +204,7 @@ function preload() {
         x: width / 2,
         y: height / 2 * 1.25,
         text: '0%',
-        style: {
-            font: screenWidth / 96 + 'px pixel_nums',
-            fill: '#ffffff'
-        }
+        style: { font: screenWidth / 96 + 'px pixel_nums', fill: '#ffffff' }
     });
     percentText.setOrigin(0.5, 0.5);
     
@@ -214,18 +216,13 @@ function preload() {
     });
     
     this.load.on('complete', function () {
-        progressBar.destroy();
-        progressBox.destroy();
-        percentText.destroy();
+        progressBar.destroy(); progressBox.destroy(); percentText.destroy();
         loadingGif.forEach(gif => {gif.style.display = 'none';});
     });
 
     this.load.bitmapFont('carrier_command', 'assets/fonts/carrier_command.png', 'assets/fonts/carrier_command.xml');
     this.load.plugin('rexvirtualjoystickplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexvirtualjoystickplugin.min.js', true);
-    this.load.plugin('rexcheckboxplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexcheckboxplugin.min.js', true);
-    this.load.plugin('rexsliderplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexsliderplugin.min.js', true);
-    this.load.plugin('rexkawaseblurpipelineplugin', 'https://raw.githubusercontent.com/rexrainbow/phaser3-rex-notes/master/dist/rexkawaseblurpipelineplugin.min.js', true);
-
+    
     isLevelOverworld = Phaser.Math.Between(0, 100) <= 84;
     let levelStyle = isLevelOverworld ? 'overworld' : 'underground';
 
@@ -233,12 +230,7 @@ function preload() {
     this.load.spritesheet('mario-grown', 'assets/entities/mario-grown.png', { frameWidth: 18, frameHeight: 32 });
     this.load.spritesheet('mario-fire', 'assets/entities/mario-fire.png', { frameWidth: 18, frameHeight: 32 });
     this.load.spritesheet('goomba', 'assets/entities/' + levelStyle + '/goomba.png', { frameWidth: 16, frameHeight: 16 });
-    this.load.spritesheet('koopa', 'assets/entities/koopa.png', { frameWidth: 16, frameHeight: 24 });
-    this.load.spritesheet('shell', 'assets/entities/shell.png', { frameWidth: 16, frameHeight: 15 });
-
-    this.load.spritesheet('fireball', 'assets/entities/fireball.png', { frameWidth: 8, frameHeight: 8 });
-    this.load.spritesheet('fireball-explosion', 'assets/entities/fireball-explosion.png', { frameWidth: 16, frameHeight: 16 });
-
+    
     this.load.image('cloud1', 'assets/scenery/overworld/cloud1.png');
     this.load.image('cloud2', 'assets/scenery/overworld/cloud2.png');
     this.load.image('mountain1', 'assets/scenery/overworld/mountain1.png');
@@ -250,18 +242,17 @@ function preload() {
     this.load.image('flag-mast', 'assets/scenery/flag-mast.png');
     this.load.image('final-flag', 'assets/scenery/final-flag.png');
     this.load.image('sign', 'assets/scenery/sign.png');
-
+    
     this.load.image('horizontal-tube', 'assets/scenery/horizontal-tube.png');
     this.load.image('horizontal-final-tube', 'assets/scenery/horizontal-final-tube.png');
     this.load.image('vertical-extralarge-tube', 'assets/scenery/vertical-large-tube.png');
     this.load.image('vertical-small-tube', 'assets/scenery/vertical-small-tube.png');
     this.load.image('vertical-medium-tube', 'assets/scenery/vertical-medium-tube.png');
-    this.load.image('vertical-large-tube', 'assets/scenery/vertical-large-tube.png');
-
+    
     this.load.image('gear', 'assets/hud/gear.png');
     this.load.image('settings-bubble', 'assets/hud/settings-bubble.png');
     this.load.spritesheet('npc', 'assets/hud/npc.png', { frameWidth: 16, frameHeight: 24 });
-
+    
     this.load.image('floorbricks', 'assets/scenery/' + levelStyle + '/floorbricks.png');
     this.load.image('start-floorbricks', 'assets/scenery/overworld/floorbricks.png');
     this.load.image('block', 'assets/blocks/' + levelStyle + '/block.png');
@@ -271,13 +262,12 @@ function preload() {
     this.load.spritesheet('brick-debris', 'assets/blocks/' + levelStyle + '/brick-debris.png', { frameWidth: 8, frameHeight: 8 });
     this.load.spritesheet('mistery-block', 'assets/blocks/' + levelStyle + '/misteryBlock.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('custom-block', 'assets/blocks/overworld/customBlock.png', { frameWidth: 16, frameHeight: 16 });
-
+    
     this.load.spritesheet('coin', 'assets/collectibles/coin.png', { frameWidth: 16, frameHeight: 16 });
     this.load.spritesheet('ground-coin', 'assets/collectibles/underground/ground-coin.png', { frameWidth: 10, frameHeight: 14 });
     this.load.spritesheet('fire-flower', 'assets/collectibles/' + levelStyle + '/fire-flower.png', { frameWidth: 16, frameHeight: 16 });
     this.load.image('live-mushroom', 'assets/collectibles/live-mushroom.png');
-    this.load.image('super-mushroom', 'assets/collectibles/super-mushroom.png');
-
+    
     this.load.audio('music', 'assets/sound/music/overworld/theme.mp3');
     this.load.audio('underground-music', 'assets/sound/music/underground/theme.mp3');
     this.load.audio('hurry-up-music', 'assets/sound/music/' + levelStyle +'/hurry-up-theme.mp3');
@@ -285,14 +275,9 @@ function preload() {
     this.load.audio('win', 'assets/sound/music/win.wav');
     this.load.audio('jumpsound', 'assets/sound/effects/jump.mp3');
     this.load.audio('coin', 'assets/sound/effects/coin.mp3');
-    this.load.audio('powerup-appears', 'assets/sound/effects/powerup-appears.mp3');
-    this.load.audio('consume-powerup', 'assets/sound/effects/consume-powerup.mp3');
     this.load.audio('powerdown', 'assets/sound/effects/powerdown.mp3');
     this.load.audio('goomba-stomp', 'assets/sound/effects/goomba-stomp.wav');
     this.load.audio('flagpole', 'assets/sound/effects/flagpole.mp3');
-    this.load.audio('fireball', 'assets/sound/effects/fireball.mp3');
-    this.load.audio('kick', 'assets/sound/effects/kick.mp3');
-    this.load.audio('time-warning', 'assets/sound/effects/time-warning.mp3');
     this.load.audio('here-we-go', Phaser.Math.Between(0, 100) < 98 ? 'assets/sound/effects/here-we-go.mp3' : 'assets/sound/effects/cursed-here-we-go.mp3');
     this.load.audio('pauseSound', 'assets/sound/effects/pause.wav');
     this.load.audio('block-bump', 'assets/sound/effects/block-bump.wav');
@@ -306,87 +291,44 @@ function initSounds() {
     this.musicTheme = this.sound.add('music', { volume: 0.15 });
     this.musicTheme.play({ loop: -1 });
     this.musicGroup.add(this.musicTheme);
-
     this.undergroundMusicTheme = this.sound.add('underground-music', { volume: 0.15 });
-    this.musicGroup.add(this.undergroundMusicTheme);
-
     this.hurryMusicTheme = this.sound.add('hurry-up-music', { volume: 0.15 });
-    this.musicGroup.add(this.hurryMusicTheme);
-
     this.gameOverSong = this.sound.add('gameoversong', { volume: 0.3 });
-    this.musicGroup.add(this.gameOverSong);
-        
     this.winSound = this.sound.add('win', { volume: 0.3 });
-    this.musicGroup.add(this.winSound);
-
     this.jumpSound = this.sound.add('jumpsound', { volume: 0.10 });
-    this.effectsGroup.add(this.jumpSound);
-
     this.coinSound = this.sound.add('coin', { volume: 0.2 });
-    this.effectsGroup.add(this.coinSound);
-
-    this.powerUpAppearsSound = this.sound.add('powerup-appears', { volume: 0.2 });
-    this.effectsGroup.add(this.powerUpAppearsSound);
-
-    this.consumePowerUpSound = this.sound.add('consume-powerup', { volume: 0.2 });
-    this.effectsGroup.add(this.consumePowerUpSound);
-
     this.powerDownSound = this.sound.add('powerdown', { volume: 0.3 });
-    this.effectsGroup.add(this.powerDownSound);
-
     this.goombaStompSound = this.sound.add('goomba-stomp', { volume: 1 });
-    this.effectsGroup.add(this.goombaStompSound);
-
     this.flagPoleSound = this.sound.add('flagpole', { volume: 0.3 });
-    this.effectsGroup.add(this.flagPoleSound);
-
-    this.fireballSound = this.sound.add('fireball', { volume: 0.3 });
-    this.effectsGroup.add(this.fireballSound);
-
-    this.kickSound = this.sound.add('kick', { volume: 0.3 });
-    this.effectsGroup.add(this.kickSound);
-
-    this.timeWarningSound = this.sound.add('time-warning', { volume: 0.2 });
-    this.effectsGroup.add(this.timeWarningSound);
-
     this.hereWeGoSound = this.sound.add('here-we-go', { volume: 0.17 });
-    this.effectsGroup.add(this.hereWeGoSound);
-
     this.pauseSound = this.sound.add('pauseSound', { volume: 0.17 });
-    this.effectsGroup.add(this.pauseSound);
-
     this.blockBumpSound = this.sound.add('block-bump', { volume: 0.3 });
-    this.effectsGroup.add(this.blockBumpSound);
-
     this.breakBlockSound = this.sound.add('break-block', { volume: 0.5 });
-    this.effectsGroup.add(this.breakBlockSound);
 }
 
 function create() {
     let startText = isTutorialMode ? "مرحلة التعليم..." : "اللعبة تبدأ...";
 
-    this.commandText = this.add.text(screenWidth / 2, 80, startText, {
-        fontSize: "36px",
-        fill: "#ffffff",
-        backgroundColor: "#000000",
-        padding: { x: 20, y: 10 }
-    }).setOrigin(0.5).setScrollFactor(0); 
-    this.commandText.depth = 1000;
+    // Create Graphics for Rounded Backgrounds First
+    this.commandBg = this.add.graphics().setScrollFactor(0).setDepth(999);
+    this.pauseBg = this.add.graphics().setScrollFactor(0).setDepth(2999).setVisible(false);
 
-    // 🌟 MODIFIED: Created Pause Text (Hidden by default)
-    pauseText = this.add.text(screenWidth / 2, screenHeight / 2, "PAUSED\nاضغط ESC للاستمرار", {
+    // Create Text Without Sharp Backgrounds
+    this.commandText = this.add.text(screenWidth / 2, 80, startText, marioTextStyle)
+        .setOrigin(0.5).setScrollFactor(0).setDepth(1000); 
+    
+    updateTextBg(this.commandText, this.commandBg);
+
+    pauseText = this.add.text(screenWidth / 2, screenHeight / 2, "PAUSED\nاضغط ESC أو أي مكان للإكمال", {
+        ...marioTextStyle, 
         fontSize: "48px",
-        fill: "#ffffff",
-        align: "center",
-        backgroundColor: "#ff0000",
-        padding: { x: 50, y: 20 }
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(3000).setVisible(false);
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(3000).setVisible(false).setInteractive();
+    
+    updateTextBg(pauseText, this.pauseBg);
+    
+    pauseText.on('pointerdown', () => togglePause.call(this));
 
-    playerController = {
-        time: { leftDown: 0, rightDown: 0 },
-        direction: { positive: true },
-        speed: { run: velocityX }
-    };
+    playerController = { time: { leftDown: 0, rightDown: 0 }, direction: { positive: true }, speed: { run: velocityX } };
 
     this.physics.world.setBounds(0, 0, worldWidth, screenHeight);
     this.cameras.main.setBounds(0, 0, worldWidth, screenHeight);
@@ -400,30 +342,16 @@ function create() {
     drawStartScreen.call(this);
     createGoombas.call(this);
     createControls.call(this);
-    applySettings.call(this);
+    
+    if (typeof applySettings === 'function') applySettings.call(this);
     
     smoothedControls = new SmoothedHorionztalControl(0.001);
 
-    // 🌟 MODIFIED: Add Keyboard Listener for Pause (ESC Key)
-    this.input.keyboard.on('keydown-ESC', () => {
-        togglePause.call(this);
-    });
+    this.input.keyboard.on('keydown-ESC', () => { togglePause.call(this); });
 }
 
 function createControls() {
-    this.joyStick = this.plugins.get('rexvirtualjoystickplugin').add(this, {
-        x: screenWidth * 0.118,
-        y: screenHeight / 1.68,
-        radius: mobileDevice ? 100 : 0,
-        base: this.add.circle(0, 0, mobileDevice ? 75 : 0, 0x0000000, 0.05),
-        thumb: this.add.circle(0, 0, mobileDevice ? 25 : 0, 0xcccccc, 0.2),
-    });
-
-    // 🌟 MODIFIED: Add a physical Pause Button on the HUD
-    this.pauseButton = this.add.text(screenWidth - 100, 50, "⏸️", { fontSize: '50px' })
-        .setInteractive().setScrollFactor(0).setDepth(2000)
-        .on('pointerdown', () => togglePause.call(this));
-
+    // 🌟 MODIFIED: Removed Pause UI Button entirely as requested
     const keyNames = ['JUMP', 'DOWN', 'LEFT', 'RIGHT', 'FIRE', 'PAUSE'];
     const defaultCodes = [Phaser.Input.Keyboard.KeyCodes.SPACE, Phaser.Input.Keyboard.KeyCodes.S, Phaser.Input.Keyboard.KeyCodes.A, Phaser.Input.Keyboard.KeyCodes.D, Phaser.Input.Keyboard.KeyCodes.Q, Phaser.Input.Keyboard.KeyCodes.ESC];
     
@@ -436,11 +364,8 @@ function createControls() {
 function generateRandomCoordinate(entitie = false, ground = true) {
     const startPos = entitie ? screenWidth * 1.5 : screenWidth;
     const endPos = entitie ? worldWidth - screenWidth * 3 : worldWidth;
-  
     let coordinate = Phaser.Math.Between(startPos, endPos);
-  
     if (!ground) return coordinate;
-  
     for (let hole of worldHolesCoords) {
       if (coordinate >= hole.start - platformPiecesWidth * 1.5 && coordinate <= hole.end) {
         return generateRandomCoordinate.call(this, entitie, ground);
@@ -451,43 +376,20 @@ function generateRandomCoordinate(entitie = false, ground = true) {
   
 function drawWorld() {
     this.add.rectangle(screenWidth, 0,worldWidth, screenHeight, isLevelOverworld ? 0x8585FF : 0x000000).setOrigin(0).depth = -1;
-
     let propsY = screenHeight - platformHeight;
 
     if (isLevelOverworld) {
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 760), Math.trunc(worldWidth / 380)); i++) {
-            let x = generateRandomCoordinate(false, false);
-            let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, y, 'cloud1').setOrigin(0).setScale(screenHeight / 1725);
-            } else {
-                this.add.image(x, y, 'cloud2').setOrigin(0).setScale(screenHeight / 1725);
-            }
+            let x = generateRandomCoordinate(false, false); let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
+            this.add.image(x, y, Phaser.Math.Between(0, 10) < 5 ? 'cloud1' : 'cloud2').setOrigin(0).setScale(screenHeight / 1725);
         }
-
         for (i = 0; i < Phaser.Math.Between(worldWidth / 6400, worldWidth / 3800); i++) {
             let x = generateRandomCoordinate();
-
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-            } else {
-                this.add.image(x, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
-            }
+            this.add.image(x, propsY, Phaser.Math.Between(0, 10) < 5 ? 'mountain1' : 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
         }
-        
         for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 960), Math.trunc(worldWidth / 760)); i++) {
             let x = generateRandomCoordinate();
-
-            if (Phaser.Math.Between(0, 10) < 5) {
-                this.add.image(x, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
-            } else {
-                this.add.image(x, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
-            }
-        }
-
-        for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 4000), Math.trunc(worldWidth / 2000)); i++) {
-            let x = generateRandomCoordinate();
-            this.add.tileSprite(x, propsY, Phaser.Math.Between(100, 250), 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
+            this.add.image(x, propsY, Phaser.Math.Between(0, 10) < 5 ? 'bush1' : 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
         }
     }
 
@@ -501,21 +403,16 @@ function drawWorld() {
 
     this.finalFlag = this.add.image(worldWidth - (worldWidth / 30), propsY * 0.93, 'final-flag').setOrigin(0.5, 1);
     this.finalFlag.setScale(screenHeight / 400);
-
     this.add.image(worldWidth - (worldWidth / 75), propsY, 'castle').setOrigin(0.5, 1).setScale(screenHeight / 300);
 }
 
 function generateLevel() {
     let pieceStart = screenWidth;
-    let lastWasHole = 0;
-    let lastWasStructure = 0;
+    let lastWasHole = 0; let lastWasStructure = 0;
 
-    this.platformGroup = this.add.group();
-    this.fallProtectionGroup = this.add.group();
-    this.blocksGroup = this.add.group();
-    this.constructionBlocksGroup = this.add.group();
-    this.misteryBlocksGroup = this.add.group();
-    this.immovableBlocksGroup = this.add.group();
+    this.platformGroup = this.add.group(); this.fallProtectionGroup = this.add.group();
+    this.blocksGroup = this.add.group(); this.constructionBlocksGroup = this.add.group();
+    this.misteryBlocksGroup = this.add.group(); this.immovableBlocksGroup = this.add.group();
     this.groundCoinsGroup = this.add.group();
 
     if (!isLevelOverworld) {
@@ -526,30 +423,20 @@ function generateLevel() {
 
     for (i=0; i <= platformPieces; i++) {
         let number = Phaser.Math.Between(0, 100);
-        
         let holeAvoidanceChance = isTutorialMode ? 80 : 0; 
 
         if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= holeAvoidanceChance || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
             lastWasHole--;
-
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
             this.physics.add.existing(Npiece);
-            Npiece.body.immovable = true;
-            Npiece.body.allowGravity = false;
-            Npiece.isPlatform = true;
-            Npiece.depth = 2;
-            this.platformGroup.add(Npiece);
-            this.physics.add.collider(player, Npiece);
+            Npiece.body.immovable = true; Npiece.body.allowGravity = false; Npiece.isPlatform = true; Npiece.depth = 2;
+            this.platformGroup.add(Npiece); this.physics.add.collider(player, Npiece);
 
             if (!(pieceStart >= (worldWidth - screenWidth * (isLevelOverworld ? 1 : 1.5))) && pieceStart > (screenWidth + platformPiecesWidth * 2) && lastWasHole < 1 && lastWasStructure < 1) {
-                lastWasStructure = generateStructure.call(this, pieceStart);
-            }
-            else {
-                lastWasStructure--;
-            }
+                if(typeof generateStructure === 'function') lastWasStructure = generateStructure.call(this, pieceStart);
+            } else { lastWasStructure--; }
         } else {
             worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
-            
             lastWasHole = 2;
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
@@ -559,145 +446,127 @@ function generateLevel() {
 
     this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
     this.startScreenTrigger.depth = 4;
-    this.physics.add.existing(this.startScreenTrigger);
-    this.startScreenTrigger.body.allowGravity = false;
-    this.startScreenTrigger.body.immovable = true;
+    this.physics.add.existing(this.startScreenTrigger); this.startScreenTrigger.body.allowGravity = false; this.startScreenTrigger.body.immovable = true;
     this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
 
     let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-    this.physics.add.existing(invisibleWall2);
-    invisibleWall2.body.allowGravity = false;
-    invisibleWall2.body.immovable = true;
-    this.physics.add.collider(player, invisibleWall2);
-    this.fallProtectionGroup.add(invisibleWall2);
+    this.physics.add.existing(invisibleWall2); invisibleWall2.body.allowGravity = false; invisibleWall2.body.immovable = true;
+    this.physics.add.collider(player, invisibleWall2); this.fallProtectionGroup.add(invisibleWall2);
 
     if (!isLevelOverworld) {
-        this.verticalTube = this.add.tileSprite(worldWidth - screenWidth, screenHeight - platformHeight, 32, screenHeight, 'vertical-extralarge-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.verticalTube.depth = 2;
-        this.physics.add.existing(this.verticalTube);
-        this.verticalTube.body.allowGravity = false;
-        this.verticalTube.body.immovable = true;
-        this.physics.add.collider(player, this.verticalTube);
-
         this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.finalTrigger.depth = 2;
-        this.physics.add.existing(this.finalTrigger);
-        this.finalTrigger.body.allowGravity = false;
-        this.finalTrigger.body.immovable = true;
+        this.finalTrigger.depth = 2; this.physics.add.existing(this.finalTrigger); this.finalTrigger.body.allowGravity = false; this.finalTrigger.body.immovable = true;
         this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
-
-        let invisibleWall1 = this.add.rectangle(worldWidth - screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-        this.physics.add.existing(invisibleWall1);
-        invisibleWall1.body.allowGravity = false;
-        invisibleWall1.body.immovable = true;
-        this.physics.add.collider(player, invisibleWall1);
-        this.fallProtectionGroup.add(invisibleWall1);
     }
 
     let fallProtections = this.fallProtectionGroup.getChildren();
     for (let i = 0; i < fallProtections.length; i++) {
-        this.physics.add.existing(fallProtections[i]);
-        fallProtections[i].body.allowGravity = false;
-        fallProtections[i].body.immovable = true;
+        this.physics.add.existing(fallProtections[i]); fallProtections[i].body.allowGravity = false; fallProtections[i].body.immovable = true;
     }
 
     let misteryBlocks = this.misteryBlocksGroup.getChildren();
     for (let i = 0; i < misteryBlocks.length; i++) {
-        this.physics.add.existing(misteryBlocks[i]);
-        misteryBlocks[i].body.allowGravity = false;
-        misteryBlocks[i].body.immovable = true;
-        misteryBlocks[i].depth = 2;
-        misteryBlocks[i].anims.play('mistery-block-default', true);
-        this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
+        this.physics.add.existing(misteryBlocks[i]); misteryBlocks[i].body.allowGravity = false; misteryBlocks[i].body.immovable = true; misteryBlocks[i].depth = 2;
+        misteryBlocks[i].anims.play('mistery-block-default', true); this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
     }
     
     let blocks = this.blocksGroup.getChildren();
     for (let i = 0; i < blocks.length; i++) {
-        this.physics.add.existing(blocks[i]);
-        blocks[i].body.allowGravity = false;
-        blocks[i].body.immovable = true;
-        blocks[i].depth = 2;
+        this.physics.add.existing(blocks[i]); blocks[i].body.allowGravity = false; blocks[i].body.immovable = true; blocks[i].depth = 2;
         this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
     }
 
     let constructionBlocks = this.constructionBlocksGroup.getChildren();
     for (let i = 0; i < constructionBlocks.length; i++) {
-        this.physics.add.existing(constructionBlocks[i]);
-        constructionBlocks[i].isImmovable = true;
-        constructionBlocks[i].body.allowGravity = false;
-        constructionBlocks[i].body.immovable = true;
-        constructionBlocks[i].depth = 2;
+        this.physics.add.existing(constructionBlocks[i]); constructionBlocks[i].isImmovable = true; constructionBlocks[i].body.allowGravity = false; constructionBlocks[i].body.immovable = true; constructionBlocks[i].depth = 2;
         this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
     }
 
     let immovableBlocks = this.immovableBlocksGroup.getChildren();
     for (let i = 0; i < immovableBlocks.length; i++) {
-        this.physics.add.existing(immovableBlocks[i]);
-        immovableBlocks[i].body.allowGravity = false;
-        immovableBlocks[i].body.immovable = true;
-        immovableBlocks[i].depth = 2;
+        this.physics.add.existing(immovableBlocks[i]); immovableBlocks[i].body.allowGravity = false; immovableBlocks[i].body.immovable = true; immovableBlocks[i].depth = 2;
         this.physics.add.collider(player, immovableBlocks[i]);
     }
 
     let groundCoins = this.groundCoinsGroup.getChildren();
     for (let i = 0; i < groundCoins.length; i++) {
-        this.physics.add.existing(groundCoins[i]);
-        groundCoins[i].anims.play('ground-coin-default', true);
-        groundCoins[i].body.allowGravity = false;
-        groundCoins[i].body.immovable = true;
-        groundCoins[i].depth = 2;
+        this.physics.add.existing(groundCoins[i]); groundCoins[i].anims.play('ground-coin-default', true); groundCoins[i].body.allowGravity = false; groundCoins[i].body.immovable = true; groundCoins[i].depth = 2;
         this.physics.add.overlap(player, groundCoins[i], collectCoin, null, this);
     }
 }
 
+// 🌟 MODIFIED: Lightweight Collision Logic to Stop Block Lag
+function destroyBlock(player, block) {
+    if (!player.body.blocked.up) return;
+
+    if (playerState > 0) { // Big Mario
+        this.breakBlockSound.play();
+        block.disableBody(true, true); 
+        if(typeof addToScore === 'function') addToScore.call(this, 50);
+    } else { // Small Mario
+        if (block.isBumping) return;
+        block.isBumping = true;
+        this.blockBumpSound.play();
+        
+        // Lightweight visual bounce (no physics tweens)
+        block.y -= 5;
+        setTimeout(() => {
+            if(block && block.body) {
+                block.y += 5;
+                block.isBumping = false;
+            }
+        }, 100);
+    }
+}
+
+function revealHiddenBlock(player, block) {
+    if (!player.body.blocked.up || block.isEmpty) return;
+
+    block.isEmpty = true; // Set immediately to stop multi-triggers
+    block.setFrame(1); 
+    this.coinSound.play();
+    if(typeof addToScore === 'function') addToScore.call(this, 200);
+
+    // Lightweight visual bounce
+    block.y -= 5;
+    setTimeout(() => {
+        if(block && block.body) block.y += 5;
+    }, 100);
+}
+
 function startLevel(player, trigger) {
-    if (!player.body.blocked.right && !trigger.body.blocked.left)
-        return;
+    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
 
     this.powerDownSound.play();
     this.physics.world.setBounds(screenWidth, 0, worldWidth, screenHeight);
-    applyPlayerInvulnerability.call(this, 4000);
-    playerBlocked = true;
-    player.setVelocityX(5);
-    player.anims.play('run', true).flipX = false;
-    this.cameras.main.fadeOut(900, 0, 0, 0);
-    this.hereWeGoSound.play();
+    if(typeof applyPlayerInvulnerability === 'function') applyPlayerInvulnerability.call(this, 4000);
+    playerBlocked = true; player.setVelocityX(5); player.anims.play('run', true).flipX = false;
+    this.cameras.main.fadeOut(900, 0, 0, 0); this.hereWeGoSound.play();
 
     setTimeout(() => {
         if (!isLevelOverworld) {
-            player.y = screenHeight / 5;
-            this.musicTheme.stop();
-            this.undergroundMusicTheme.play({ loop: -1 });
+            player.y = screenHeight / 5; this.musicTheme.stop(); this.undergroundMusicTheme.play({ loop: -1 });
         }
-        player.x = screenWidth * 1.1;
-        this.cameras.main.pan(screenWidth * 1.5, 0, 0);
-        playerBlocked = false;
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-        createHUD.call(this);
-        updateTimer.call(this);
+        player.x = screenWidth * 1.1; this.cameras.main.pan(screenWidth * 1.5, 0, 0);
+        playerBlocked = false; this.cameras.main.fadeIn(500, 0, 0, 0);
+        if(typeof createHUD === 'function') createHUD.call(this); 
+        if(typeof updateTimer === 'function') updateTimer.call(this); 
         this.startScreenTrigger.destroy();
         levelStarted = true;
         
         this.commandText.setText("🟢 افتح يدك للركض 🟢");
-
-        if (this.settingsMenuOpen)hideSettings.call(this);
+        updateTextBg(this.commandText, this.commandBg);
+        
+        if (this.settingsMenuOpen) { if(typeof hideSettings === 'function') hideSettings.call(this); }
     }, 1100);
 }
 
 function teleportToLevelEnd(player, trigger) {
-    if (!player.body.blocked.right && !trigger.body.blocked.left)
-        return;
+    if (!player.body.blocked.right && !trigger.body.blocked.left) return;
     
-    playerBlocked = true;
-    this.cameras.main.stopFollow();
-    this.powerDownSound.play();
+    playerBlocked = true; this.cameras.main.stopFollow(); this.powerDownSound.play();
 
-    this.tweens.add({
-        targets: player,
-        duration: 75,
-        alpha: 0
-    });
-
+    this.tweens.add({ targets: player, duration: 75, alpha: 0 });
     this.cameras.main.fadeOut(450, 0, 0, 0);
     player.anims.play(playerState > 0 ? playerState == 1 ? 'grown-mario-run'  : 'fire-mario-run' : 'run', true).flipX = false;
     this.undergroundRoof.destroy();
@@ -705,30 +574,18 @@ function teleportToLevelEnd(player, trigger) {
     setTimeout(() => {
         this.physics.world.setBounds(worldWidth - screenWidth, 0, worldWidth, screenHeight);
         this.tpTube = this.add.tileSprite(worldWidth - screenWidth / 1.089, screenHeight - platformHeight, 32, 32, 'vertical-medium-tube').setScale(screenHeight / 345).setOrigin(1);
-        this.tpTube.depth = 4;
-        this.physics.add.existing(this.tpTube);
-        this.tpTube.body.allowGravity = false;
-        this.tpTube.body.immovable = true;
+        this.tpTube.depth = 4; this.physics.add.existing(this.tpTube); this.tpTube.body.allowGravity = false; this.tpTube.body.immovable = true;
         this.physics.add.collider(player, this.tpTube);
         this.add.rectangle(worldWidth - screenWidth, 0, worldWidth, screenHeight,0x8585FF).setOrigin(0).depth = -1;
         this.add.tileSprite(worldWidth - screenWidth, screenHeight, screenWidth, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5).depth = 2;
     }, 500);
 
     setTimeout(() => {
-        player.alpha = 1;
-        player.x = worldWidth - screenWidth / 1.08;
-        this.cameras.main.pan(worldWidth - screenWidth / 2, 0, 0);
-        this.cameras.main.fadeIn(500, 0, 0, 0);
-        this.powerDownSound.play();
-        this.finalTrigger.destroy();
-        this.tweens.add({
-            targets: player,
-            duration: 500,
-            y: this.tpTube.getBounds().y
-        });
-        setTimeout(() => {
-            playerBlocked = false;
-        }, 500);
+        player.alpha = 1; player.x = worldWidth - screenWidth / 1.08;
+        this.cameras.main.pan(worldWidth - screenWidth / 2, 0, 0); this.cameras.main.fadeIn(500, 0, 0, 0);
+        this.powerDownSound.play(); this.finalTrigger.destroy();
+        this.tweens.add({ targets: player, duration: 500, y: this.tpTube.getBounds().y });
+        setTimeout(() => { playerBlocked = false; }, 500);
     }, 1100);
 }
 
@@ -737,91 +594,57 @@ function drawStartScreen() {
     this.add.rectangle(0, 0, screenWidth, screenHeight, 0x8585FF).setOrigin(0).depth = -1;
 
     let platform = this.add.tileSprite(0, screenHeight, screenWidth / 2, platformHeight, 'start-floorbricks').setScale(2).setOrigin(0, 0.5);
-    this.physics.add.existing(platform);
-    platform.body.immovable = true;
-    platform.body.allowGravity = false;
+    this.physics.add.existing(platform); platform.body.immovable = true; platform.body.allowGravity = false;
     this.physics.add.collider(player, platform);
 
-    this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 1.25, screenHeight / 2, 'cloud1').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 1.05, screenHeight / 6.5, 'cloud2').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 3, screenHeight / 3.5, 'cloud2').setScale(screenHeight / 1725);
-    this.add.image(screenWidth / 2.65, screenHeight / 2.8, 'cloud2').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 50, screenHeight / 3, 'cloud1').setScale(screenHeight / 1725);
     this.add.image(screenWidth / 25, screenHeight / 10, 'sign').setOrigin(0).setScale(screenHeight / 350);
 
     let propsY = screenHeight - platformHeight;
-
     this.add.image(screenWidth / 50, propsY, 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
-    this.add.image(screenWidth / 300, propsY, 'mountain1').setOrigin(0, 1).setScale(screenHeight / 517);
-    this.add.image(screenWidth / 4, propsY, 'bush1').setOrigin(0, 1).setScale(screenHeight / 609);
-    this.add.image(screenWidth / 1.55, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.image(screenWidth / 1.5, propsY, 'bush2').setOrigin(0, 1).setScale(screenHeight / 609);
     this.add.tileSprite(screenWidth / 15, propsY, 350, 35, 'fence').setOrigin(0, 1).setScale(screenHeight / 863);
 
     this.customBlock = this.add.sprite(screenCenterX, screenHeight - (platformHeight * 1.9),'custom-block').setScale(screenHeight / 345);
     this.customBlock.anims.play('custom-block-default')
     this.physics.add.collider(player, this.customBlock, function() {
-        if (player.body.blocked.up) showSettings.call(this);
+        if (player.body.blocked.up) { if(typeof showSettings === 'function') showSettings.call(this); }
     }, null, this);
-    this.physics.add.existing(this.customBlock);
-    this.customBlock.body.allowGravity = false;
-    this.customBlock.body.immovable = true;
-
-    this.add.image(screenCenterX, screenHeight - (platformHeight * 1.9), 'gear').setScale(screenHeight / 13000).setInteractive().on('pointerdown', () => showSettings.call(this));
-    this.add.image(screenCenterX * 1.12, screenHeight - (platformHeight * 1.5), 'settings-bubble').setScale(screenHeight / 620);
+    this.physics.add.existing(this.customBlock); this.customBlock.body.allowGravity = false; this.customBlock.body.immovable = true;
+    
     this.add.sprite(screenCenterX * 1.07, screenHeight - platformHeight, 'npc').setOrigin(0.5, 1).setScale(screenHeight / 365).anims.play('npc-default', true);
 }
-
-// ---------------- RESULTS AND METRICS ----------------
 
 function raiseFlag() {
     if (flagRaised) { return false; }
     
     this.commandText.setText("🎉 مبروك! وصلت للهدف! 🎉");
+    updateTextBg(this.commandText, this.commandBg);
     
     this.cameras.main.stopFollow();
     if(this.timeLeftText) this.timeLeftText.stopped = true;
 
-    this.musicTheme.stop();
-    this.undergroundMusicTheme.stop();
-    this.hurryMusicTheme.stop();
+    this.musicTheme.stop(); this.undergroundMusicTheme.stop(); this.hurryMusicTheme.stop();
     this.flagPoleSound.play();
 
-    this.tweens.add({
-        targets: this.finalFlag,
-        duration: 1000,
-        y: screenHeight / 2.2
-    });
-
-    setTimeout(() => {
-        this.winSound.play();
-    }, 1000);
+    this.tweens.add({ targets: this.finalFlag, duration: 1000, y: screenHeight / 2.2 });
+    setTimeout(() => { this.winSound.play(); }, 1000);
     
-    flagRaised = true;
-    playerBlocked = true;
+    flagRaised = true; playerBlocked = true;
+    if(typeof addToScore === 'function') addToScore.call(this, 2000, player);
 
-    addToScore.call(this, 2000, player);
-
-    setTimeout(() => {
-        showResults(this);
-    }, 2500);
-
+    setTimeout(() => { showResults(this); }, 2500);
     return false;
 }
+
 function showResults(scene) {
-    
     const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
     const avgConfidence = confidenceCount > 0 ? (confidenceSum / confidenceCount).toFixed(2) : "0.00";
     const avgReaction = reactionTimes.length > 0 ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2) : "0.00";
 
-
-    //  التوجيه بعد ثانيتين
     setTimeout(() => {
         const baseUrl = "../index.html"; 
-        
         if (isTutorialMode) {
-            // نرسل mode=finished_tutorial ليعرف الموقع أنه يجب إيقاف الكاميرا
             window.location.href = baseUrl + "?mode=finished_tutorial";
         } else {
             const params = new URLSearchParams({
@@ -829,110 +652,38 @@ function showResults(scene) {
                 correct: `${correctGestures}/${totalCommands}`,
                 acc: accuracy,
                 conf: avgConfidence,
-                time: avgReaction
+                time: avgReaction,
+                wrong: wrongMoves
             });
             window.location.href = baseUrl + "?" + params.toString();
         }
     }, 2000);
 }
 
-function consumeMushroom(player, mushroom) {
-    if (gameOver || gameWinned) return;
-
-    this.consumePowerUpSound.play();
-    addToScore.call(this, 1000, mushroom);
-    mushroom.destroy();
-
-    if (playerState > 0 ) return;
-
-    playerBlocked = true;
-    this.anims.pauseAll();
-    this.physics.pause();
-    player.setTint(0xfefefe).anims.play('grown-mario-idle');
-    let i = 0;
-    let interval = setInterval(() => {
-        i++;
-        player.anims.play(i % 2 === 0 ? 'grown-mario-idle' : 'idle');
-        if (i > 5) {
-            clearInterval(interval);
-            player.clearTint();
-        }
-    }, 100);
-
-    setTimeout(() => { 
-        this.physics.resume();
-        this.anims.resumeAll();
-        playerBlocked = false;
-        playerState = 1;
-        updateTimer.call(this);
-    }, 1000);
-}
-
-function consumeFireflower(player, fireFlower) {
-    if (gameOver || gameWinned) return;
-
-    this.consumePowerUpSound.play();
-    addToScore.call(this, 1000, fireFlower);
-    fireFlower.destroy();
-
-    if (playerState > 1 ) return;
-
-    let anim = playerState > 0 ? 'grown-mario-idle' : 'idle';
-
-    playerBlocked = true;
-    this.anims.pauseAll();
-    this.physics.pause();
-
-    player.setTint(0xfefefe).anims.play('fire-mario-idle');
-    let i = 0;
-    let interval = setInterval(() => {
-        i++;
-        player.anims.play(i % 2 === 0 ? 'fire-mario-idle' : anim);
-        if (i > 5) {
-            clearInterval(interval);
-            player.clearTint();
-        }
-    }, 100);
-
-    setTimeout(() => { 
-        this.physics.resume();
-        this.anims.resumeAll();
-        playerBlocked = false;
-        playerState = 2;
-        updateTimer.call(this);
-    }, 1000);
-}
-
 function collectCoin(player, coin) {
     this.coinSound.play();
-    addToScore.call(this, 200);
+    if(typeof addToScore === 'function') addToScore.call(this, 200);
     coin.destroy();
 }
-
-// ---------------- COMMAND & PROXIMITY LOGIC ----------------
 
 function triggerCommand(scene, command, uiText) {
     currentCommand = command;
     commandActive = true;
     commandStartTime = Date.now();
     scene.commandText.setText(uiText);
+    updateTextBg(scene.commandText, scene.commandBg);
     totalCommands++;
 }
 
 function registerCorrectGesture(scene) {
     const reaction = (Date.now() - commandStartTime) / 1000;
-    
-    reactionTimes.push(reaction);
-    correctGestures++;
-    confidenceSum += aiConfidence;
-    confidenceCount++;
-    
+    reactionTimes.push(reaction); correctGestures++; confidenceSum += aiConfidence; confidenceCount++;
     commandActive = false;
     scene.commandText.setText("🌟 عمل رائع! 🌟");
+    updateTextBg(scene.commandText, scene.commandBg);
 }
 
 function update(delta) {
-    // 🌟 MODIFIED: Stop the update loop if game is paused
     if (gamePaused || gameOver || gameWinned || !player || playerBlocked) return;
     
     if (player.y >= screenHeight - 5) {
@@ -940,108 +691,76 @@ function update(delta) {
         this.powerDownSound.play();
         
         player.y = screenHeight / 3;
-        player.x = Math.max(screenWidth, player.x - 250); 
+        player.x = Math.max(screenWidth, player.x - (screenWidth * 0.8)); 
+        
         player.setVelocityY(0);
         player.setVelocityX(0);
         
         commandActive = false; 
         this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌");
+        updateTextBg(this.commandText, this.commandBg);
         
         if(typeof applyPlayerInvulnerability === "function") applyPlayerInvulnerability.call(this, 2000);
         
         return;
     }
 
-    // --- 1. PROXIMITY SCANNER (HOLES) ---
     let closestObstacleDist = Infinity;
 
     if (levelStarted) {
         for (let hole of worldHolesCoords) {
             let dist = hole.start - player.x;
-            
             if (dist > 0 && dist < WARNING_DISTANCE) {
                 closestObstacleDist = dist;
-                
                 if (lastObstacleX !== hole.start && !commandActive) {
-                    triggerCommand(this, "Close", "⚠️ اقبض يدك للقفز ⚠️");
+                    triggerCommand(this, "Close", "⚠️ اغلق يدك للقفز ⚠️");
                     lastObstacleX = hole.start; 
                 }
                 break; 
             }
         }
-
         if (closestObstacleDist === Infinity && !commandActive && currentCommand !== "Open") {
             triggerCommand(this, "Open", "🟢 افتح يدك للركض 🟢");
         }
     }
 
-   // --- 2. AI MOVEMENT EXECUTION ---
-
-    if (aiConfidence < 0.70) {
-        aiGesture = "NoHand";
-    }
+    if (aiConfidence < 0.70) { aiGesture = "NoHand"; }
 
     const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
     const JUMP_POWER = velocityY * 1.3;
 
     if (aiGesture === "Open") {
-        player.setVelocityX(RUN_SPEED);
-        player.flipX = false;
-
-        player.anims.play(
-            playerState > 0
-                ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run')
-                : 'run',
-            true
-        );
-
-        if (commandActive && currentCommand === "Open") {
-            registerCorrectGesture(this);
-        }
+        player.setVelocityX(RUN_SPEED); player.flipX = false;
+        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') : 'run', true);
+        if (commandActive && currentCommand === "Open") registerCorrectGesture(this);
     }
     else if (aiGesture === "Close") {
         player.setVelocityX(RUN_SPEED * 1.8);
-
         if (player.body.blocked.down) {
-            player.setVelocityY(-JUMP_POWER);
-            this.jumpSound.play();
-
-            if (commandActive && currentCommand === "Close") {
-                registerCorrectGesture(this);
-            }
+            player.setVelocityY(-JUMP_POWER); this.jumpSound.play();
+            if (commandActive && currentCommand === "Close") registerCorrectGesture(this);
         }
     }
     else {
         player.setVelocityX(0);
-
-        player.anims.play(
-            playerState > 0
-                ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle')
-                : 'idle',
-            true
-        );
+        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle') : 'idle', true);
     }
 
-    // --- 3. CAMERA LOGIC ---
     const playerVelocityX = player.body.velocity.x;
     const camera = this.cameras.main;
 
-    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing &&
-        player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
-        camera.startFollow(player, true, 0.1, 0.05);
-        camera.isFollowing = true;
+    if (playerVelocityX > 0 && levelStarted && !reachedLevelEnd && !camera.isFollowing && player.x >= screenWidth * 1.5 && player.x >= (camera.worldView.x + camera.width / 2)) {
+        camera.startFollow(player, true, 0.1, 0.05); camera.isFollowing = true;
     }
 
     if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
         furthestPlayerPos = player.x;
         const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
         camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
-        camera.stopFollow();
-        camera.isFollowing = false;
+        camera.stopFollow(); camera.isFollowing = false;
     }
 
     if (!reachedLevelEnd && !isLevelOverworld && camera.isFollowing && player.x >= worldWidth - screenWidth * 1.5) {
-        reachedLevelEnd = true;
-        camera.stopFollow();
+        reachedLevelEnd = true; camera.stopFollow();
     }
 }
