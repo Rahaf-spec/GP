@@ -134,7 +134,7 @@ function fetchGesture() {
         .catch(err => {});
 }
 
-setInterval(fetchGesture, 600);
+setInterval(fetchGesture, 450);
 
 // ---------------- PAUSE LOGIC ----------------
 function togglePause() {
@@ -691,7 +691,7 @@ function update(delta) {
         this.powerDownSound.play();
         
         player.y = screenHeight / 3;
-        player.x = Math.max(screenWidth, player.x - (screenWidth * 0.8)); 
+        player.x = Math.max(screenWidth, player.x - (screenWidth * 0.4)); 
         
         player.setVelocityY(0);
         player.setVelocityX(0);
