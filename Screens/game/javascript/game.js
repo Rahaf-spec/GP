@@ -495,28 +495,45 @@ function generateLevel() {
     }
 }
 
-// 🌟 MODIFIED: Lightweight Collision Logic to Stop Block Lag
 function destroyBlock(player, block) {
     if (!player.body.blocked.up) return;
 
-    if (playerState > 0) { // Big Mario
+    if (playerState > 0) {  //big mario 
         this.breakBlockSound.play();
-        block.disableBody(true, true); 
+        block.destroy(); 
         if(typeof addToScore === 'function') addToScore.call(this, 50);
-    } else { // Small Mario
+    } else { 
         if (block.isBumping) return;
         block.isBumping = true;
         this.blockBumpSound.play();
         
-        // Lightweight visual bounce (no physics tweens)
-        block.y -= 5;
-        setTimeout(() => {
-            if(block && block.body) {
-                block.y += 5;
-                block.isBumping = false;
+        this.tweens.add({ 
+            targets: block, 
+            y: block.y - 5, 
+            duration: 60, 
+            yoyo: true,
+            onComplete: () => {
+                if (block) block.isBumping = false;
             }
-        }, 100);
+        });
     }
+}
+
+function revealHiddenBlock(player, block) {
+    // التأكد أن ماريو يضرب من الأسفل وأن الصندوق ليس فارغاً بالفعل
+    if (!player.body.blocked.up || block.isEmpty) return;
+
+    block.isEmpty = true; 
+    block.setFrame(1); 
+    this.coinSound.play();
+    if(typeof addToScore === 'function') addToScore.call(this, 200);
+
+    this.tweens.add({ 
+        targets: block, 
+        y: block.y - 5, 
+        duration: 60, 
+        yoyo: true 
+    });
 }
 
 function revealHiddenBlock(player, block) {
