@@ -1,131 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ar" dir="rtl">
 
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hand Hero - Numbers Island</title>
+    <title>HAND HERO</title>
+
     <link rel="stylesheet" href="style.css">
+
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
 </head>
 
 <body>
+    <div class="game-hud">
+        <div>COIN<br><span>🪙 000</span></div>
+        <div>TIME<br><span>⏱ 300</span></div>
+    </div>
+
     <div class="container">
+
+        <!-- HEADER -->
         <div class="header">
-            <div>
-                <h1>Hand Hero</h1>
-            </div>
-            <div class="logo">🖐️</div>
+            <h1>HAND HERO</h1>
+
         </div>
 
+        <!-- SIGN IN -->
         <div id="signin" class="screen active">
             <div class="grid-2 one-col">
                 <div class="card">
                     <div class="center">
-                        <div class="emoji">✨</div>
-                        <div class="title">Create Account</div>
-                        <div class="subtitle">Join the game and track your progress</div>
+                        <div class="emoji">⭐</div>
+                        <div class="title">إنشاء حساب</div>
+                        <div class="subtitle">ابدئي رحلتك في اللعبة</div>
                     </div>
 
-                    <input type="text" placeholder="Full Name" id="signName">
-                    <input type="text" placeholder="Username" id="signUser">
-                    <input type="email" placeholder="Email" id="signEmail">
-                    <input type="password" placeholder="Password" id="signPass">
+                    <!-- <input type="text" placeholder="Full Name" id="signName">-->
+                    <!--  <input type="text" placeholder="Username" id="signUser"-->
+                    <input type="email" placeholder="البريد الإلكتروني" id="signEmail">
+                    <input type="password" placeholder="كلمة المرور" id="signPass">
 
-                    <button class="btn btn-blue" onclick="signUpUser()">Create Account</button>
+                    <button class="btn btn-blue" onclick="signUpUser()">إنشاء حساب</button>
 
                     <div class="switch-text">
-                        Already have an account?
-                        <span onclick="showScreen('login')">Login here</span>
+                        لديك حساب؟
+                        <span onclick="showScreen('login')">سجلي الدخول هنا</span>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- LOGIN -->
         <div id="login" class="screen">
             <div class="back-row">
-                <button class="small-btn btn-gray" onclick="showScreen('signin')">Back</button>
+                <button class="small-btn btn-gray" onclick="showScreen('signin')">رجوع</button>
             </div>
 
             <div class="grid-2 one-col">
                 <div class="card">
                     <div class="center">
                         <div class="emoji">🔐</div>
-                        <div class="title">Login</div>
-                        <div class="subtitle">Login to continue your game journey</div>
+                        <div class="title">تسجيل الدخول</div>
+                        <div class="subtitle">أهلًا بعودتك يا بطل</div>
                     </div>
 
-                    <input type="email" placeholder="Email" id="loginEmail">
-                    <input type="password" placeholder="Password" id="loginPass">
+                    <input type="email" placeholder="البريد الإلكتروني" id="loginEmail">
+                    <input type="password" placeholder="كلمة المرور" id="loginPass">
 
-                    <button class="btn btn-green" onclick="loginUser()">Login</button>
+                    <button class="btn btn-green" onclick="loginUser()">دخول</button>
 
                     <div class="switch-text">
-                        Don’t have an account?
-                        <span onclick="showScreen('signin')">Create one</span>
+                        ليس لديك حساب؟
+                        <span onclick="showScreen('signin')">أنشئي حسابك</span>
                     </div>
                 </div>
             </div>
         </div>
 
+        <!-- HOME -->
         <div id="home" class="screen">
             <div class="back-row">
-                <button class="small-btn btn-gray" onclick="showScreen('login')">Back</button>
+                <button class="small-btn btn-gray" onclick="showScreen('login')">رجوع</button>
             </div>
 
-            <div class="card">
+            <div class="card home-menu">
                 <div class="character">
-                    <img src="assets/mario-pixel-art-super-mario.gif" alt="Mario Character">
+                    <img src="assets/mario-pixel-art-super-mario.gif" alt="Game Character">
                 </div>
-                <div class="title">Welcome Back</div>
-                <div class="small-text">Tap to start</div>
+
+                <div class="title">أهلًا بعودتك!</div>
+                <div class="small-text">اختار المرحلة وابدأ اللعب</div>
 
                 <div class="action-buttons one-col">
-                    <button class="btn btn-green" onclick="startTutorial()">TUTORIAL MODE</button>
-                    <button class="btn btn-purple" onclick="startGame()">START GAME</button>
-                    <button class="btn btn-blue" onclick="toggleScoreHistory()">SHOW SCORE HISTORY</button>
-                    <button class="btn btn-pink" onclick="showAllHistory()">View All Games</button>
-
+                    <button class="btn btn-green" onclick="startTutorial()">مرحلة تعليمية</button>
+                    <button class="btn btn-purple" onclick="startGame()">بدء اللعبة</button>
+                    <button class="btn btn-blue" onclick="toggleScoreHistory()">عرض تاريخ النتائج</button>
+                    <button class="btn btn-pink" onclick="showAllHistory()">عرض جميع الألعاب</button>
                 </div>
 
                 <div id="scoreHistoryBox" class="history-box">
-                    <div class="history-title">Score History</div>
+                    <div class="history-title">تاريخ النتائج</div>
                     <div id="historyList"></div>
                 </div>
             </div>
         </div>
 
+        <!-- RESULTS -->
         <div id="results" class="screen">
             <div class="back-row">
-                <button class="small-btn btn-gray" onclick="showScreen('home')">Back</button>
+                <button class="small-btn btn-gray" onclick="showScreen('home')">رجوع</button>
             </div>
-            <!-- ⭐⭐⭐⭐⭐⭐ -->
+
             <div class="result-card">
-                <div class="emoji">🎉</div>
-                <div class="title">Great Job</div>
+                <div class="emoji">🏆</div>
+                <div class="title">أحسنت!</div>
 
                 <div class="score-row">
-                    <span>Correct Gestures</span>
+                    <span>الإيماءات الصحيحة</span>
                     <strong id="display-correct">--</strong>
                 </div>
+
                 <div class="score-row">
-                    <span>Accuracy</span>
+                    <span>الدقة</span>
                     <strong id="display-accuracy">--</strong>
                 </div>
+
                 <div class="score-row">
-                    <span>Average Confidence</span>
+                    <span>متوسط الثقة</span>
                     <strong id="display-confidence">--</strong>
                 </div>
+
                 <div class="score-row">
-                    <span>Average Reaction Time</span>
+                    <span>متوسط سرعة الاستجابة</span>
                     <strong id="display-time">--</strong>
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-pink" onclick="startGame()">Play Again</button>
-
+                    <button class="btn btn-pink" onclick="startGame()">العب مرة أخرى</button>
                 </div>
             </div>
         </div>
+
     </div>
 
     <script type="module" src="script.js"></script>
