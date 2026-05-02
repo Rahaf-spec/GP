@@ -98,7 +98,8 @@ function updateResults() {
             correctGestures: urlParams.get('correct') || "0/0",
             accuracy: urlParams.get('acc') || "0",
             averageConfidence: urlParams.get('conf') || "0.00",
-            averageReactionTime: urlParams.get('time') || "0.00"
+            averageReactionTime: urlParams.get('time') || "0.00",
+            wrongMoves: urlParams.get('wrong') || "0" // استلام القيمة الجديدة
         };
 
         // تحديث واجهة الـ HTML
@@ -107,6 +108,7 @@ function updateResults() {
             document.getElementById('display-accuracy').innerText = gameData.accuracy + "%";
             document.getElementById('display-confidence').innerText = gameData.averageConfidence;
             document.getElementById('display-time').innerText = gameData.averageReactionTime + " sec";
+            document.getElementById('display-wrong').innerText = gameData.wrongMoves;
         }
 
         // حفظ النتيجة في Firebase
@@ -171,7 +173,8 @@ async function saveScoreToFirebase(scoreValue, details) {
                 correctGestures: details.correctGestures,
                 accuracy: details.accuracy,
                 averageConfidence: details.averageConfidence,
-                averageReactionTime: details.averageReactionTime
+                averageReactionTime: details.averageReactionTime,
+                wrongMoves: details.wrongMoves
             },
             createdAt: Date.now()
         });
@@ -286,14 +289,16 @@ function showAllHistory() {
                 <div><strong>Accuracy:</strong> ${item.details?.accuracy || "--"}%</div>
                 <div><strong>Average Confidence:</strong> ${item.details?.averageConfidence || "--"}</div>
                 <div><strong>Average Reaction Time:</strong> ${item.details?.averageReactionTime || "--"} sec</div>
+                <div><strong>Wrong Moves:</strong> ${item.details?.wrongMoves || "--"}</div>
             </div>
         `).join("");
     }
+    
 
     document.querySelector("#home .card").appendChild(container);
 }
 
-async function saveCurrentGameResult(correctGestures, accuracy, averageConfidence, averageReactionTime) {
+async function saveCurrentGameResult(correctGestures, accuracy, averageConfidence, averageReactionTime, wrongMoves) {
     if (!currentUser) return;
     document.getElementById("display-correct").textContent =
         (correctGestures != null && correctGestures !== "") ? correctGestures : "--";
@@ -306,11 +311,15 @@ async function saveCurrentGameResult(correctGestures, accuracy, averageConfidenc
 
     document.getElementById("display-time").textContent =
         averageReactionTime != null ? `${averageReactionTime} sec` : "--";
+
+    document.getElementById("display-time").textContent =
+        wrongMoves != null ? `${wrongMoves}` : "--";
     await saveScoreToFirebase(accuracy, {
         correctGestures: correctGestures,
         accuracy: accuracy,
         averageConfidence: averageConfidence,
-        averageReactionTime: averageReactionTime
+        averageReactionTime: averageReactionTime,
+        wrongMoves: wrongMoves
     });
 
     await loadUserScores();

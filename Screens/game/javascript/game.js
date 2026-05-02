@@ -134,7 +134,7 @@ function fetchGesture() {
         .catch(err => {});
 }
 
-setInterval(fetchGesture, 450);
+setInterval(fetchGesture, 100);
 
 // ---------------- PAUSE LOGIC ----------------
 function togglePause() {
