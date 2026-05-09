@@ -97,8 +97,24 @@ def camera_loop():
 
         latest_prediction["gesture"] = gesture
         latest_prediction["confidence"] = conf
-
+        
         time.sleep(0.05)
+            # تحويل الإيماءة إلى أكشن (هذا هو لب اختبار المنطق البرمجي)
+        # if conf < 0.80:
+        #     action = "IDLE (Wait)"
+        # elif gesture == "Open":
+        #     action = "WALK (Character moves forward)"
+        # elif gesture == "Close":
+        #     action = "JUMP (Character leaps)"
+        # else:
+        #     action = "STAY"
+
+        # # طباعة السجل للتيرمنال (هذا ما ستقومين بتصويره للتقرير)
+        # print(f"--- LOG ENTRY ---", flush=True)
+        # print(f"INPUT: Gesture={conf}, Conf={conf:.2f}", flush=True)
+        # print(f"DECISION: Action sent to Game -> {action}", flush=True)
+        # print(f"-----------------", flush=True)
+       
 
 threading.Thread(target=camera_loop, daemon=True).start()
 
@@ -107,6 +123,7 @@ threading.Thread(target=camera_loop, daemon=True).start()
 @app.get("/gesture")
 def get_gesture():
     return JSONResponse(latest_prediction)
+    
 
 # ⭐⭐⭐⭐⭐⭐ تشغيل الكاميرا
 @app.get("/start")

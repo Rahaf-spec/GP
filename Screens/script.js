@@ -283,13 +283,12 @@ function showAllHistory() {
         const reversed = [...scores.allHistory].reverse();
         container.innerHTML = reversed.map((item, index) => `
             <div class="history-item">
-                <div><strong>Game ${scores.allHistory.length - index}</strong></div>
-                <div><strong>Score:</strong> ${item.score}%</div>
-                <div><strong>Correct Gestures:</strong> ${item.details?.correctGestures || "--"}</div>
-                <div><strong>Accuracy:</strong> ${item.details?.accuracy || "--"}%</div>
-                <div><strong>Average Confidence:</strong> ${item.details?.averageConfidence || "--"}</div>
-                <div><strong>Average Reaction Time:</strong> ${item.details?.averageReactionTime || "--"} sec</div>
-                <div><strong>Wrong Moves:</strong> ${item.details?.wrongMoves || "--"}</div>
+                <div><strong>لعبة ${scores.allHistory.length - index}</strong></div>
+                <div><strong>الدقة:</strong> ${item.details?.accuracy || "--"}%</div>
+                <div><strong>الإيماءات الصحيحة:</strong> ${item.details?.correctGestures || "--"}</div>
+                <div><strong>متوسط الثقة:</strong> ${item.details?.averageConfidence || "--"}</div>
+                <div><strong>متوسط سرعة الإستجابة:</strong> ${item.details?.averageReactionTime || "--"} sec</div>
+                <div><strong>الحركات الخاطئة/السقوط:</strong> ${item.details?.wrongMoves || "--"}</div>
             </div>
         `).join("");
     }

@@ -331,6 +331,9 @@ input:focus {
 .btn-pink {
     background: linear-gradient(180deg, #fb7185, #e11d48);
 }
+.btn-blue2 {
+    background: linear-gradient(180deg, #4c5ff6, #284cdc);
+}
 
 .btn-gray {
     background: linear-gradient(180deg, #737373, #3f3f46);
