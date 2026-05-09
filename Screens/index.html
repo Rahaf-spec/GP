@@ -93,14 +93,36 @@
                 <div class="small-text">اختار المرحلة وابدأ اللعب</div>
 
                 <div class="action-buttons one-col">
-                    <div id="adaptive-info" style="margin: 10px; padding: 10px; background: #eee; border-radius: 8px;">
-                        🌟 المستوى الحالي في الطور التكيفي: <span id="current-lvl" style="font-weight: bold; color: #2ecc71;">1</span>
+                    <div id="adaptive-info" style="margin: 10px; padding: 10px; background: #eee; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>
+                            🌟 المستوى الحالي في الطور التكيفي: 
+                            <span id="current-lvl" style="font-weight: bold; color: #2ecc71;">1</span>
+                        </span>
+
+                        <!-- زر التصفير الصغير بأيقونة -->
+                        <button onclick="resetAdaptiveMode()" class="btn-reset-icon" title="تصفير المستوى">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+                        </button>
                     </div>
-                    <button class="btn btn-green" onclick="startTutorial()">مرحلة تعليمية</button>
-                    <button class="btn btn-purple" onclick="startGame()">الطور العادي</button>
-                    <button class="btn btn-blue" onclick="startAdaptiveMode()">الطور التكيفي</button>
-                    <button class="btn btn-pink" onclick="showAllHistory()">عرض جميع الألعاب</button>
-                    <button class="btn btn-blue2" onclick="window.location.href='statistics.html'">عرض إحصائيات الأداء</button>
+
+                    <!-- هيكل النافذة المنبثقة المخصصة (Modal) -->
+                    <div id="resetModal" class="custom-modal">
+                        <div class="modal-content">
+                            <h3>هل أنت متأكد؟</h3>
+                            <p>سيتم إعادة تعيين مستواك الحالي إلى المستوى الأول.</p>
+                            <div class="modal-buttons">
+                                <button class="btn-confirm" onclick="confirmReset()">نعم، تصفير</button>
+                                <button class="btn-cancel" onclick="closeResetModal()">إلغاء</button>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-blue" onclick="startTutorial()">الطور التعليمي</button>
+                    <button class="btn btn-pink" onclick="startGame()">الطور العادي</button>
+                    <button class="btn btn-green" onclick="startAdaptiveMode()">الطور التكيفي</button>
+                    <div style="display: flex; justify-content: center; gap: 10px; width: 100%; margin: 15px 0;">
+                        <button class="btn btn-gray" onclick="showAllHistory()" style="flex: 1; max-width: 200px;">تاريخ النتائج</button>
+                        <button class="btn btn-gray" onclick="window.location.href='statistics.html'" style="flex: 1; max-width: 200px;">إحصائيات الأداء</button>
+                    </div>
                     <a href="index.html" class="back-btn"> </a>
                    
                 </div>
@@ -148,7 +170,7 @@
                 </div>
 
                 <div class="action-buttons">
-                    <button class="btn btn-pink" onclick="startGame()">العب مرة أخرى</button>
+                    <button class="btn btn-pink" onclick="playAgain()">العب مرة أخرى</button>
                 </div>
             </div>
         </div>

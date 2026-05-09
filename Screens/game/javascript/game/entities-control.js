@@ -57,10 +57,7 @@ function createGoombas() {
     this.physics.add.collider(this.goombasGroup.getChildren(), this.fallProtectionGroup.getChildren());
     if (this.finalTrigger) this.physics.add.collider(this.goombasGroup.getChildren(), this.finalTrigger);
 
-    // تنظيف الوحوش التي تخرج عن حدود العالم
-    if (typeof clearGoombas === 'function') {
-        setInterval(() => clearGoombas.call(this), 250);
-    }
+
 }
 
 function checkGoombaCollision(player, goomba) {

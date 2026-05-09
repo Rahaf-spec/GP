@@ -73,7 +73,35 @@ async function stopCamera() {
         console.error("Error stopping camera:", error);
     }
 }
+// وظيفة لفتح النافذة المنبثقة
+window.resetAdaptiveMode = function() {
+    const modal = document.getElementById('resetModal');
+    modal.style.display = 'block';
+}
 
+// وظيفة لإغلاق النافذة
+window.closeResetModal = function() {
+    const modal = document.getElementById('resetModal');
+    modal.style.display = 'none';
+}
+
+// وظيفة التأكيد النهائي ومسح البيانات
+window.confirmReset = function() {
+    localStorage.setItem('adaptiveLevel', 1);
+    localStorage.setItem('successStreak', 0);
+    
+    // إخفاء النافذة وتحديث الصفحة
+    closeResetModal();
+    location.reload();
+}
+
+// إغلاق النافذة عند الضغط خارجها
+window.onclick = function(event) {
+    const modal = document.getElementById('resetModal');
+    if (event.target == modal) {
+        closeResetModal();
+    }
+}
 //⭐⭐⭐⭐⭐⭐ معالجة نتائج اللعبة القادمة من Phaser 
 function updateResults() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -119,8 +147,6 @@ function updateResults() {
         // إيقاف الكاميرا
         stopCamera();
 
-        // تنظيف الرابط لجمالية الموقع 
-        window.history.replaceState({}, document.title, window.location.pathname);
     }
 }
 
@@ -209,6 +235,7 @@ async function loadUserScores() {
 
 // --- وظائف الواجهة (UI Functions) ---
 // دالة لتحديث عرض المستوى في الواجهة
+
 function updateLevelDisplay() {
     // جلب المستوى من localStorage، وإذا لم يوجد نعتبره 1
     const savedLevel = localStorage.getItem('adaptiveLevel') || 1;
@@ -219,7 +246,6 @@ function updateLevelDisplay() {
         levelElement.innerText = savedLevel;
     }
 }
-
 // تشغيل الدالة فور تحميل الصفحة
 window.onload = function() {
     updateLevelDisplay();
@@ -272,7 +298,24 @@ window.startAdaptiveMode = async function() {
         window.location.href = "game/game.html?mode=adaptive";
     }, 1000);
 }
+// دالة إعادة اللعب المصلحة
+window.playAgain = async function() {
+    // 1. الحصول على المود من الرابط الحالي لصفحة النتائج
+    const urlParams = new URLSearchParams(window.location.search);
+    const lastMode = urlParams.get('mode'); 
 
+    console.log("Replaying mode:", lastMode);
+
+    // 2. فحص المود وتوجيه اللاعب للدالة الصحيحة
+    if (lastMode === 'adaptive') {
+        await window.startAdaptiveMode(); 
+    } else if (lastMode === 'tutorial') {
+        await window.startTutorial();
+    } else {
+        // إذا لم يوجد مود أو كان المود عادي
+        await window.startGame(); 
+    }
+}
 function renderHistory() {
     const list = document.getElementById('historyList');
     if (!list) return;

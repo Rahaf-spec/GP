@@ -45,6 +45,10 @@ var pauseText;
 
 var config = {
     type: Phaser.AUTO,
+    render: {
+        pixelArt: true, // مهم جداً للأداء في ألعاب البيكسل
+        antialias: false,
+    },
     width: screenWidth,
     height: screenHeight,
     backgroundColor: 0x8585FF,
@@ -313,7 +317,7 @@ function initSounds() {
 }
 
 function create() {
-    let startText = isTutorialMode ? "مرحلة التعليم..." : "اللعبة تبدأ...";
+    let startText = isTutorialMode ? "مرحلة التعليم" : "اللعبة تبدأ";
     // داخل دالة create
     
     // Create Graphics for Rounded Backgrounds First
@@ -396,11 +400,11 @@ function drawWorld() {
     let propsY = screenHeight - platformHeight;
 
     if (isLevelOverworld) {
-        for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 760), Math.trunc(worldWidth / 380)); i++) {
+        for (i = 0; i < Phaser.Math.Between(Math.trunc(worldWidth / 2000), Math.trunc(worldWidth / 380)); i++) {
             let x = generateRandomCoordinate(false, false); let y = Phaser.Math.Between(screenHeight / 80, screenHeight / 2.2);
             this.add.image(x, y, Phaser.Math.Between(0, 10) < 5 ? 'cloud1' : 'cloud2').setOrigin(0).setScale(screenHeight / 1725);
         }
-        for (i = 0; i < Phaser.Math.Between(worldWidth / 6400, worldWidth / 3800); i++) {
+        for (i = 0; i < Phaser.Math.Between(worldWidth / 10000, worldWidth / 3800); i++) {
             let x = generateRandomCoordinate();
             this.add.image(x, propsY, Phaser.Math.Between(0, 10) < 5 ? 'mountain1' : 'mountain2').setOrigin(0, 1).setScale(screenHeight / 517);
         }
@@ -434,8 +438,6 @@ function generateLevel() {
     this.constructionBlocksGroup = this.add.group();
     this.misteryBlocksGroup = this.add.group(); 
     this.immovableBlocksGroup = this.add.group();
-    this.groundCoinsGroup = this.add.group();
-
     // إعدادات المود التكيفي
     let maxHolesCount = isAdaptiveMode ? adaptiveLevel : 999; // تحديد سقف للحفر في مود التكيف
 
@@ -459,7 +461,7 @@ function generateLevel() {
                 }
             } else {
                 // المود العادي: الاحتمال التقليدي (مثلاً 15%)
-                if (randomNumber < 15) {
+                if (randomNumber < 10) {
                     shouldCreateHole = true;
                 }
             }
@@ -480,7 +482,6 @@ function generateLevel() {
             Npiece.depth = 2;
             this.platformGroup.add(Npiece); 
             this.physics.add.collider(player, Npiece);
-
             // إنشاء الهياكل (أنابيب/صناديق) فقط إذا لم تكن منطقة آمنة
             if (!isSafeZone && lastWasHole < 1 && lastWasStructure < 1) {
                 if(typeof generateStructure === 'function') lastWasStructure = generateStructure.call(this, pieceStart);
@@ -523,9 +524,9 @@ function generateLevel() {
     }
 
     // تفعيل الخصائص الفيزيائية للمجموعات
-    [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup, this.groundCoinsGroup].forEach(group => {
+    [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup].forEach(group => {
         group.getChildren().forEach(child => {
-            this.physics.add.existing(child);
+            this.physics.add.existing(child, true);
             child.body.allowGravity = false;
             child.body.immovable = true;
             child.depth = 2;
@@ -538,10 +539,7 @@ function generateLevel() {
                 this.physics.add.collider(player, child, destroyBlock, null, this);
             } else if (group === this.immovableBlocksGroup) {
                 this.physics.add.collider(player, child);
-            } else if (group === this.groundCoinsGroup) {
-                child.anims.play('ground-coin-default', true);
-                this.physics.add.overlap(player, child, collectCoin, null, this);
-            }
+            } 
         });
     });
 }
@@ -549,58 +547,62 @@ function generateLevel() {
 function destroyBlock(player, block) {
     if (!player.body.blocked.up) return;
 
-    if (playerState > 0) {  //big mario 
-        this.breakBlockSound.play();
+    if (playerState > 0) {  // ماريو الكبير
+        if (this.breakBlockSound) this.breakBlockSound.play();
+        
+        // تدمير فوري بدون إنشاء جزيئات حطام
+        block.disableBody(true, true); 
         block.destroy(); 
-        if(typeof addToScore === 'function') addToScore.call(this, 50);
     } else { 
+        // ماريو الصغير - هزة بسيطة جداً
         if (block.isBumping) return;
         block.isBumping = true;
-        this.blockBumpSound.play();
+        if (this.blockBumpSound) this.blockBumpSound.play();
         
-        this.tweens.add({ 
-            targets: block, 
-            y: block.y - 5, 
-            duration: 60, 
-            yoyo: true,
-            onComplete: () => {
-                if (block) block.isBumping = false;
+        block.y -= 5;
+        this.time.delayedCall(60, () => {
+            if (block && block.body) {
+                block.y += 5;
+                block.isBumping = false;
             }
         });
     }
 }
 
 function revealHiddenBlock(player, block) {
-    // التأكد أن ماريو يضرب من الأسفل وأن الصندوق ليس فارغاً بالفعل
-    if (!player.body.blocked.up || block.isEmpty) return;
+    // التأكد أن الضرب من الأسفل + أن البلوك ليس في حالة حركة حالياً + ليس فارغاً
+    if (!player.body.blocked.up || block.isEmpty || block.isAnimating) return;
 
+    block.isAnimating = true; // قفل لمنع التكرار
     block.isEmpty = true; 
     block.setFrame(1); 
-    this.coinSound.play();
-    if(typeof addToScore === 'function') addToScore.call(this, 200);
+    if (this.coinSound) this.coinSound.play();
 
-    this.tweens.add({ 
-        targets: block, 
-        y: block.y - 5, 
-        duration: 60, 
-        yoyo: true 
+    // حركة بصرية بسيطة جداً يدوية (أخف من الـ Tween)
+    const originalY = block.y;
+    block.y -= 5;
+    
+    this.time.delayedCall(100, () => {
+        block.y = originalY;
+        block.isAnimating = false; // فتح القفل
+        // تحديث الجسم الفيزيائي بعد تحريكه يدوياً (مهم جداً للـ Static Body)
+        if (block.body) block.body.updateFromGameObject();
     });
 }
 
-function revealHiddenBlock(player, block) {
-    if (!player.body.blocked.up || block.isEmpty) return;
+// function revealHiddenBlock(player, block) {
+//     if (!player.body.blocked.up || block.isEmpty) return;
 
-    block.isEmpty = true; // Set immediately to stop multi-triggers
-    block.setFrame(1); 
-    this.coinSound.play();
-    if(typeof addToScore === 'function') addToScore.call(this, 200);
+//     block.isEmpty = true; // Set immediately to stop multi-triggers
+//     block.setFrame(1); 
+//     this.coinSound.play();
 
-    // Lightweight visual bounce
-    block.y -= 5;
-    setTimeout(() => {
-        if(block && block.body) block.y += 5;
-    }, 100);
-}
+//     // Lightweight visual bounce
+//     block.y -= 5;
+//     setTimeout(() => {
+//         if(block && block.body) block.y += 5;
+//     }, 100);
+// }
 
 function startLevel(player, trigger) {
     if (!player.body.blocked.right && !trigger.body.blocked.left) return;
@@ -735,32 +737,37 @@ function showResults(scene) {
         }
     }
 
-    setTimeout(() => {
-        const baseUrl = "../index.html"; 
-        
-        if (isTutorialMode) {
-            window.location.href = baseUrl + "?mode=finished_tutorial";
-        } else {
-            // إرسال البيانات إلى الصفحة الرئيسية بما في ذلك المستوى الحالي إذا كان المود تكيفياً
-            const params = new URLSearchParams({
-                status: "gameover",
-                mode: isAdaptiveMode ? "adaptive" : "normal",
-                level: isAdaptiveMode ? adaptiveLevel : "N/A",
-                correct: `${correctGestures}/${totalCommands}`,
-                acc: accuracy,
-                conf: avgConfidence,
-                time: avgReaction,
-                wrong: wrongMoves
-            });
-            window.location.href = baseUrl + "?" + params.toString();
+    setTimeout(async () => { // أضفنا async هنا لانتظار إغلاق الكاميرا
+    const baseUrl = "../index.html"; 
+    
+    if (isTutorialMode) {
+        // 🌟 إيقاف الكاميرا برمجياً قبل مغادرة صفحة اللعبة
+        try {
+            await fetch("http://127.0.0.1:8000/stop"); 
+            console.log("Camera stopped successfully from game side");
+        } catch (err) {
+            console.error("Failed to stop camera:", err);
         }
-    }, 2000);
+
+        // الآن ننتقل للصفحة الرئيسية
+        window.location.href = baseUrl + "?mode=finished_tutorial";
+    } else {
+        // المود العادي والتكيفي يرسل البيانات لصفحة النتائج
+        const params = new URLSearchParams({
+            status: "gameover",
+            mode: isAdaptiveMode ? "adaptive" : "normal", 
+            level: isAdaptiveMode ? adaptiveLevel : "N/A",
+            correct: `${correctGestures}/${totalCommands}`,
+            acc: accuracy,
+            conf: avgConfidence,
+            time: avgReaction,
+            wrong: wrongMoves
+        });
+        window.location.href = baseUrl + "?" + params.toString();
+            }
+        }, 500);
 }
-function collectCoin(player, coin) {
-    this.coinSound.play();
-    if(typeof addToScore === 'function') addToScore.call(this, 200);
-    coin.destroy();
-}
+
 
 function triggerCommand(scene, command, uiText) {
     currentCommand = command;
@@ -780,32 +787,63 @@ function registerCorrectGesture(scene) {
 }
 
 function update(delta) {
+    // 1. تنظيف الأرضيات والوحوش (خلف اللاعب) لتحرير الذاكرة
+    this.platformGroup.getChildren().forEach(child => {
+        if (child.x < player.x - screenWidth) {
+            this.platformGroup.remove(child, true, true); 
+        }
+    });
+
+    this.goombasGroup.getChildren().forEach(goomba => {
+        if (goomba.x < player.x - screenWidth || goomba.y > screenHeight) {
+            goomba.destroy();
+        }
+    });
+
+    // 2. تفعيل وتعطيل البلوكات العلوية بناءً على مسافة اللاعب (حل مشكلة التعليق)
+    // هذا يضمن أن المتصفح لا يحسب تصادمات مع بلوكات بعيدة
+    [this.blocksGroup, this.misteryBlocksGroup].forEach(group => {
+        group.getChildren().forEach(block => {
+            let distance = Math.abs(block.x - player.x);
+            if (distance > screenWidth * 1.2) {
+                block.body.enable = false; // تعطيل الفيزياء للبعيد
+                block.visible = false;     // إخفاء للصورة لتوفير الرندرة
+            } else {
+                block.body.enable = true;  // تفعيل للقريب
+                block.visible = true;
+            }
+        });
+    });
+
     if (gamePaused || gameOver || gameWinned || !player || playerBlocked) return;
     
+    // 3. منطق السقوط في الحفر
     if (player.y >= screenHeight - 5) {
         wrongMoves++; 
         this.powerDownSound.play();
-        
         player.y = screenHeight / 3;
         player.x = Math.max(screenWidth, player.x - (screenWidth * 0.4)); 
-        
-        player.setVelocityY(0);
-        player.setVelocityX(0);
-        
+        player.setVelocity(0, 0);
         commandActive = false; 
         this.commandText.setText("❌ ركز وحاول مرة ثانية! ❌");
         updateTextBg(this.commandText, this.commandBg);
-        
         if(typeof applyPlayerInvulnerability === "function") applyPlayerInvulnerability.call(this, 2000);
-        
         return;
     }
 
+    // 4. فحص الحفر القريبة (تحسين أداء الفحص)
     let closestObstacleDist = Infinity;
-
-    if (levelStarted) {
-        for (let hole of worldHolesCoords) {
+    if (levelStarted && this.time.now % 100 < 16) { 
+        for (let i = 0; i < worldHolesCoords.length; i++) {
+            let hole = worldHolesCoords[i];
             let dist = hole.start - player.x;
+
+            if (dist < -screenWidth) {
+                worldHolesCoords.splice(i, 1);
+                i--;
+                continue;
+            }
+
             if (dist > 0 && dist < WARNING_DISTANCE) {
                 closestObstacleDist = dist;
                 if (lastObstacleX !== hole.start && !commandActive) {
@@ -820,8 +858,8 @@ function update(delta) {
         }
     }
 
+    // 5. التحكم في ماريو بناءً على الذكاء الاصطناعي
     if (aiConfidence < 0.70) { aiGesture = "NoHand"; }
-
     const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
     const JUMP_POWER = velocityY * 1.3;
 
@@ -833,7 +871,8 @@ function update(delta) {
     else if (aiGesture === "Close") {
         player.setVelocityX(RUN_SPEED * 1.8);
         if (player.body.blocked.down) {
-            player.setVelocityY(-JUMP_POWER); this.jumpSound.play();
+            player.setVelocityY(-JUMP_POWER); 
+            this.jumpSound.play();
             if (commandActive && currentCommand === "Close") registerCorrectGesture(this);
         }
     }
@@ -842,6 +881,7 @@ function update(delta) {
         player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle') : 'idle', true);
     }
 
+    // 6. التحكم في الكاميرا وحدود العالم
     const playerVelocityX = player.body.velocity.x;
     const camera = this.cameras.main;
 
@@ -851,7 +891,7 @@ function update(delta) {
 
     if (playerVelocityX < 0 && furthestPlayerPos < player.x && levelStarted && !reachedLevelEnd && camera.isFollowing) {
         furthestPlayerPos = player.x;
-        const worldBounds = this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
+        this.physics.world.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
         camera.setBounds(camera.worldView.x, 0, worldWidth, screenHeight);
         camera.stopFollow(); camera.isFollowing = false;
     }
