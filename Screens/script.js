@@ -208,6 +208,23 @@ async function loadUserScores() {
 }
 
 // --- وظائف الواجهة (UI Functions) ---
+// دالة لتحديث عرض المستوى في الواجهة
+function updateLevelDisplay() {
+    // جلب المستوى من localStorage، وإذا لم يوجد نعتبره 1
+    const savedLevel = localStorage.getItem('adaptiveLevel') || 1;
+    
+    // البحث عن العنصر في HTML وتغيير النص بداخله
+    const levelElement = document.getElementById('current-lvl');
+    if (levelElement) {
+        levelElement.innerText = savedLevel;
+    }
+}
+
+// تشغيل الدالة فور تحميل الصفحة
+window.onload = function() {
+    updateLevelDisplay();
+    // إذا كان لديك دوال أخرى تعمل عند التحميل أضفها هنا أيضاً
+};
 async function startGame() {
     if (!currentUser) {
         alert("Please login first");
@@ -237,6 +254,22 @@ window.startTutorial = async function() {
     // التوجيه للعبة مع إرسال كلمة tutorial في الرابط
     setTimeout(() => {
         window.location.href = "game/game.html?mode=tutorial";
+    }, 1000);
+}
+// دالة تشغيل المود التكيفي
+window.startAdaptiveMode = async function() {
+    if (!currentUser) {
+        alert("Please login first");
+        showScreen('login');
+        return;
+    }
+
+    // تشغيل الكاميرا عبر البايثون كالمعتاد
+    await fetch("http://127.0.0.1:8000/start");
+
+    // التوجيه للعبة مع إرسال كلمة adaptive في الرابط
+    setTimeout(() => {
+        window.location.href = "game/game.html?mode=adaptive";
     }, 1000);
 }
 

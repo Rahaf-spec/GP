@@ -93,9 +93,12 @@
                 <div class="small-text">اختار المرحلة وابدأ اللعب</div>
 
                 <div class="action-buttons one-col">
+                    <div id="adaptive-info" style="margin: 10px; padding: 10px; background: #eee; border-radius: 8px;">
+                        🌟 المستوى الحالي في الطور التكيفي: <span id="current-lvl" style="font-weight: bold; color: #2ecc71;">1</span>
+                    </div>
                     <button class="btn btn-green" onclick="startTutorial()">مرحلة تعليمية</button>
-                    <button class="btn btn-purple" onclick="startGame()">بدء اللعبة</button>
-                    <button class="btn btn-blue" onclick="toggleScoreHistory()">آخر خمسة ألعاب</button>
+                    <button class="btn btn-purple" onclick="startGame()">الطور العادي</button>
+                    <button class="btn btn-blue" onclick="startAdaptiveMode()">الطور التكيفي</button>
                     <button class="btn btn-pink" onclick="showAllHistory()">عرض جميع الألعاب</button>
                     <button class="btn btn-blue2" onclick="window.location.href='statistics.html'">عرض إحصائيات الأداء</button>
                     <a href="index.html" class="back-btn"> </a>

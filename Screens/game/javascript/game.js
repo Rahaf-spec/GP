@@ -1,7 +1,12 @@
 // 🌟 MODIFIED: Read URL to check if we are in Tutorial Mode
+// 🌟 MODIFIED: التحقق من المود الحالي (tutorial, adaptive, normal)
 const urlParams = new URLSearchParams(window.location.search);
 const isTutorialMode = urlParams.get('mode') === 'tutorial';
+const isAdaptiveMode = urlParams.get('mode') === 'adaptive'; // مود التكيف
 
+// 🌟 ADDED: جلب مستوى المستخدم الحالي من الذاكرة (يبدأ من 1)
+var adaptiveLevel = parseInt(localStorage.getItem('adaptiveLevel')) || 1;
+var successStreak = parseInt(localStorage.getItem('successStreak')) || 0;
 // ---------------- PERFORMANCE METRICS ----------------
 var totalCommands = 0;
 var correctGestures = 0;
@@ -61,8 +66,9 @@ var config = {
     version: '0.7.7'
 };
 
-const platformPieces = isTutorialMode ? 30 : 100; 
-const worldWidth = screenWidth * (isTutorialMode ? 4 : 11); 
+// 🌟 MODIFIED: تحديد طول العالم بناءً على المود
+const platformPieces = isTutorialMode ? 30 : (isAdaptiveMode ? (40 + adaptiveLevel * 20) : 100); 
+const worldWidth = screenWidth * (isTutorialMode ? 4 : (isAdaptiveMode ? 6 : 11));
 const platformHeight = screenHeight / 5;
 
 const startOffset = screenWidth / 2.5;
@@ -308,7 +314,8 @@ function initSounds() {
 
 function create() {
     let startText = isTutorialMode ? "مرحلة التعليم..." : "اللعبة تبدأ...";
-
+    // داخل دالة create
+    
     // Create Graphics for Rounded Backgrounds First
     this.commandBg = this.add.graphics().setScrollFactor(0).setDepth(999);
     this.pauseBg = this.add.graphics().setScrollFactor(0).setDepth(2999).setVisible(false);
@@ -337,6 +344,16 @@ function create() {
     initSounds.call(this);
     createAnimations.call(this);
     createPlayer.call(this);
+    if (isAdaptiveMode) {
+        // إنشاء نص يعرض المستوى الحالي
+        this.levelDisplayText = this.add.text(20, 20, "المستوى: " + adaptiveLevel, {
+            fontFamily: '"Courier New", Courier, monospace',
+            fontSize: "24px",
+            fill: "#ffffff",
+            stroke: "#000000",
+            strokeThickness: 4
+        }).setScrollFactor(0).setDepth(5000); // setScrollFactor(0) يجعله ثابتاً لا يتحرك مع الكاميرا
+    }
     generateLevel.call(this);
     drawWorld.call(this);
     drawStartScreen.call(this);
@@ -408,12 +425,19 @@ function drawWorld() {
 
 function generateLevel() {
     let pieceStart = screenWidth;
-    let lastWasHole = 0; let lastWasStructure = 0;
+    let lastWasHole = 0; 
+    let lastWasStructure = 0;
 
-    this.platformGroup = this.add.group(); this.fallProtectionGroup = this.add.group();
-    this.blocksGroup = this.add.group(); this.constructionBlocksGroup = this.add.group();
-    this.misteryBlocksGroup = this.add.group(); this.immovableBlocksGroup = this.add.group();
+    this.platformGroup = this.add.group(); 
+    this.fallProtectionGroup = this.add.group();
+    this.blocksGroup = this.add.group(); 
+    this.constructionBlocksGroup = this.add.group();
+    this.misteryBlocksGroup = this.add.group(); 
+    this.immovableBlocksGroup = this.add.group();
     this.groundCoinsGroup = this.add.group();
+
+    // إعدادات المود التكيفي
+    let maxHolesCount = isAdaptiveMode ? adaptiveLevel : 999; // تحديد سقف للحفر في مود التكيف
 
     if (!isLevelOverworld) {
         this.blocksGroup.add(this.add.tileSprite(screenWidth, screenHeight - platformHeight / 1.2, 16, screenHeight - platformHeight, 'block2').setScale(screenHeight / 345).setOrigin(0, 1));
@@ -421,78 +445,105 @@ function generateLevel() {
         this.blocksGroup.add(this.undergroundRoof);
     }
 
-    for (i=0; i <= platformPieces; i++) {
-        let number = Phaser.Math.Between(0, 100);
-        let holeAvoidanceChance = isTutorialMode ? 80 : 0; 
+    for (let i = 0; i <= platformPieces; i++) {
+        let randomNumber = Phaser.Math.Between(0, 100);
+        
+        // منطق تحديد هل السطر القادم "حفرة" أم "أرضية"
+        let shouldCreateHole = false;
 
-        if (pieceStart >= (lastWasHole > 0 || lastWasStructure > 0 || worldWidth - platformPiecesWidth * 4) || number <= holeAvoidanceChance || pieceStart <= screenWidth * 2 || pieceStart >= worldWidth - screenWidth * 2) {
+        if (!isTutorialMode) { // التتوريال مستحيل يكون فيه حفر
+            if (isAdaptiveMode) {
+                // في مود التكيف: احتمال 20% حفرة بشرط لم نتجاوز العدد المسموح للمستوى
+                if (randomNumber < 20 && worldHolesCoords.length < maxHolesCount) {
+                    shouldCreateHole = true;
+                }
+            } else {
+                // المود العادي: الاحتمال التقليدي (مثلاً 15%)
+                if (randomNumber < 15) {
+                    shouldCreateHole = true;
+                }
+            }
+        }
+
+        // منع الحفر في البداية والنهاية أو إذا كانت القطعة السابقة حفرة أو هيكل
+        let isSafeZone = (pieceStart <= screenWidth * 2.5) || (pieceStart >= worldWidth - screenWidth * 2);
+        let isBlockedByLast = (lastWasHole > 0 || lastWasStructure > 0);
+
+        if (isSafeZone || isBlockedByLast || !shouldCreateHole) {
+            // --- إنشاء أرضية (Floor) ---
             lastWasHole--;
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
             this.physics.add.existing(Npiece);
-            Npiece.body.immovable = true; Npiece.body.allowGravity = false; Npiece.isPlatform = true; Npiece.depth = 2;
-            this.platformGroup.add(Npiece); this.physics.add.collider(player, Npiece);
+            Npiece.body.immovable = true; 
+            Npiece.body.allowGravity = false; 
+            Npiece.isPlatform = true; 
+            Npiece.depth = 2;
+            this.platformGroup.add(Npiece); 
+            this.physics.add.collider(player, Npiece);
 
-            if (!(pieceStart >= (worldWidth - screenWidth * (isLevelOverworld ? 1 : 1.5))) && pieceStart > (screenWidth + platformPiecesWidth * 2) && lastWasHole < 1 && lastWasStructure < 1) {
+            // إنشاء الهياكل (أنابيب/صناديق) فقط إذا لم تكن منطقة آمنة
+            if (!isSafeZone && lastWasHole < 1 && lastWasStructure < 1) {
                 if(typeof generateStructure === 'function') lastWasStructure = generateStructure.call(this, pieceStart);
-            } else { lastWasStructure--; }
+            } else { 
+                lastWasStructure--; 
+            }
         } else {
+            // --- إنشاء حفرة (Hole) ---
             worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
-            lastWasHole = 2;
+            lastWasHole = 2; // تأمين مسافة بعد الحفرة
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
         }
+        
         pieceStart += platformPiecesWidth * 2;
     }
 
+    // --- بقية الكود الخاص بالمشغلات (Triggers) والتصادمات ---
     this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
     this.startScreenTrigger.depth = 4;
-    this.physics.add.existing(this.startScreenTrigger); this.startScreenTrigger.body.allowGravity = false; this.startScreenTrigger.body.immovable = true;
+    this.physics.add.existing(this.startScreenTrigger); 
+    this.startScreenTrigger.body.allowGravity = false; 
+    this.startScreenTrigger.body.immovable = true;
     this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
 
     let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-    this.physics.add.existing(invisibleWall2); invisibleWall2.body.allowGravity = false; invisibleWall2.body.immovable = true;
-    this.physics.add.collider(player, invisibleWall2); this.fallProtectionGroup.add(invisibleWall2);
+    this.physics.add.existing(invisibleWall2); 
+    invisibleWall2.body.allowGravity = false; 
+    invisibleWall2.body.immovable = true;
+    this.physics.add.collider(player, invisibleWall2); 
+    this.fallProtectionGroup.add(invisibleWall2);
 
     if (!isLevelOverworld) {
         this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.finalTrigger.depth = 2; this.physics.add.existing(this.finalTrigger); this.finalTrigger.body.allowGravity = false; this.finalTrigger.body.immovable = true;
+        this.finalTrigger.depth = 2; 
+        this.physics.add.existing(this.finalTrigger); 
+        this.finalTrigger.body.allowGravity = false; 
+        this.finalTrigger.body.immovable = true;
         this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
     }
 
-    let fallProtections = this.fallProtectionGroup.getChildren();
-    for (let i = 0; i < fallProtections.length; i++) {
-        this.physics.add.existing(fallProtections[i]); fallProtections[i].body.allowGravity = false; fallProtections[i].body.immovable = true;
-    }
-
-    let misteryBlocks = this.misteryBlocksGroup.getChildren();
-    for (let i = 0; i < misteryBlocks.length; i++) {
-        this.physics.add.existing(misteryBlocks[i]); misteryBlocks[i].body.allowGravity = false; misteryBlocks[i].body.immovable = true; misteryBlocks[i].depth = 2;
-        misteryBlocks[i].anims.play('mistery-block-default', true); this.physics.add.collider(player, misteryBlocks[i], revealHiddenBlock, null, this);
-    }
-    
-    let blocks = this.blocksGroup.getChildren();
-    for (let i = 0; i < blocks.length; i++) {
-        this.physics.add.existing(blocks[i]); blocks[i].body.allowGravity = false; blocks[i].body.immovable = true; blocks[i].depth = 2;
-        this.physics.add.collider(player, blocks[i], destroyBlock, null, this);
-    }
-
-    let constructionBlocks = this.constructionBlocksGroup.getChildren();
-    for (let i = 0; i < constructionBlocks.length; i++) {
-        this.physics.add.existing(constructionBlocks[i]); constructionBlocks[i].isImmovable = true; constructionBlocks[i].body.allowGravity = false; constructionBlocks[i].body.immovable = true; constructionBlocks[i].depth = 2;
-        this.physics.add.collider(player, constructionBlocks[i], destroyBlock, null, this);
-    }
-
-    let immovableBlocks = this.immovableBlocksGroup.getChildren();
-    for (let i = 0; i < immovableBlocks.length; i++) {
-        this.physics.add.existing(immovableBlocks[i]); immovableBlocks[i].body.allowGravity = false; immovableBlocks[i].body.immovable = true; immovableBlocks[i].depth = 2;
-        this.physics.add.collider(player, immovableBlocks[i]);
-    }
-
-    let groundCoins = this.groundCoinsGroup.getChildren();
-    for (let i = 0; i < groundCoins.length; i++) {
-        this.physics.add.existing(groundCoins[i]); groundCoins[i].anims.play('ground-coin-default', true); groundCoins[i].body.allowGravity = false; groundCoins[i].body.immovable = true; groundCoins[i].depth = 2;
-        this.physics.add.overlap(player, groundCoins[i], collectCoin, null, this);
-    }
+    // تفعيل الخصائص الفيزيائية للمجموعات
+    [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup, this.groundCoinsGroup].forEach(group => {
+        group.getChildren().forEach(child => {
+            this.physics.add.existing(child);
+            child.body.allowGravity = false;
+            child.body.immovable = true;
+            child.depth = 2;
+            
+            // إضافة التصادمات بناءً على نوع المجموعة
+            if (group === this.misteryBlocksGroup) {
+                child.anims.play('mistery-block-default', true);
+                this.physics.add.collider(player, child, revealHiddenBlock, null, this);
+            } else if (group === this.blocksGroup || group === this.constructionBlocksGroup) {
+                this.physics.add.collider(player, child, destroyBlock, null, this);
+            } else if (group === this.immovableBlocksGroup) {
+                this.physics.add.collider(player, child);
+            } else if (group === this.groundCoinsGroup) {
+                child.anims.play('ground-coin-default', true);
+                this.physics.add.overlap(player, child, collectCoin, null, this);
+            }
+        });
+    });
 }
 
 function destroyBlock(player, block) {
@@ -655,17 +706,46 @@ function raiseFlag() {
 }
 
 function showResults(scene) {
-    const accuracy = totalCommands > 0 ? ((correctGestures / totalCommands) * 100).toFixed(1) : "0.0";
+    // حساب الدقة كرقيم عشري للمقارنة البرمجية
+    const accuracyNum = totalCommands > 0 ? (correctGestures / totalCommands) * 100 : 0;
+    
+    // القيم النصية للعرض وإرسالها للرابط
+    const accuracy = accuracyNum.toFixed(1);
     const avgConfidence = confidenceCount > 0 ? (confidenceSum / confidenceCount).toFixed(2) : "0.00";
     const avgReaction = reactionTimes.length > 0 ? (reactionTimes.reduce((a, b) => a + b, 0) / reactionTimes.length).toFixed(2) : "0.00";
 
+    // --- منطق المود التكيفي ---
+    if (isAdaptiveMode) {
+        if (accuracyNum >= 90) {
+            // زيادة عدد مرات النجاح المتتالي
+            successStreak++;
+            localStorage.setItem('successStreak', successStreak);
+
+            // إذا حقق الشرط مرتين متتاليتين
+            if (successStreak >= 2) {
+                adaptiveLevel++; // زيادة المستوى
+                localStorage.setItem('adaptiveLevel', adaptiveLevel);
+                localStorage.setItem('successStreak', 0); // تصفير العداد للمستوى الجديد
+                console.log("Level Up! New Level: " + adaptiveLevel);
+            }
+        } else {
+            // إذا حقق أقل من 90% يتم تصفير العداد (يجب أن تكون المرتين متتاليتين)
+            successStreak = 0;
+            localStorage.setItem('successStreak', 0);
+        }
+    }
+
     setTimeout(() => {
         const baseUrl = "../index.html"; 
+        
         if (isTutorialMode) {
             window.location.href = baseUrl + "?mode=finished_tutorial";
         } else {
+            // إرسال البيانات إلى الصفحة الرئيسية بما في ذلك المستوى الحالي إذا كان المود تكيفياً
             const params = new URLSearchParams({
                 status: "gameover",
+                mode: isAdaptiveMode ? "adaptive" : "normal",
+                level: isAdaptiveMode ? adaptiveLevel : "N/A",
                 correct: `${correctGestures}/${totalCommands}`,
                 acc: accuracy,
                 conf: avgConfidence,
@@ -676,7 +756,6 @@ function showResults(scene) {
         }
     }, 2000);
 }
-
 function collectCoin(player, coin) {
     this.coinSound.play();
     if(typeof addToScore === 'function') addToScore.call(this, 200);
