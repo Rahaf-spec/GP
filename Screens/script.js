@@ -156,12 +156,10 @@ function updateResults() {
 }
 
 async function signUpUser() {
-    const name = document.getElementById('signName').value.trim();
-    const username = document.getElementById('signUser').value.trim();
     const email = document.getElementById('signEmail').value.trim();
     const password = document.getElementById('signPass').value.trim();
 
-    if (!name || !username || !email || !password) {
+    if (!email || !password) {
         alert("Please fill all fields");
         return;
     }
