@@ -128,10 +128,7 @@ function updateResults() {
             averageConfidence: urlParams.get('conf') || "0.00",
             averageReactionTime: urlParams.get('time') || "0.00",
             wrongMoves: urlParams.get('wrong') || "0", // استلام القيمة الجديدة
-            openOk: urlParams.get('openOk') || "0", // 🌟 تأكدي أن هذا السطر موجود
-            closeOk: urlParams.get('closeOk') || "0",
-            openTotal: urlParams.get('openTotal') || "0",
-            closeTotal: urlParams.get('closeTotal')|| "0"
+         
         };
 
         // تحديث واجهة الـ HTML
@@ -206,10 +203,6 @@ async function saveScoreToFirebase(scoreValue, details) {
                 averageConfidence: details.averageConfidence,
                 averageReactionTime: details.averageReactionTime,
                 wrongMoves: details.wrongMoves,
-                openOk: details.openOk,
-                closeOk: details.closeOk,
-                openTotal: details.openTotal,
-                closeTotal: details.closeTotal
             },
             createdAt: Date.now()
         });
@@ -382,7 +375,7 @@ function showAllHistory() {
     document.querySelector("#home .card").appendChild(container);
 }
 
-async function saveCurrentGameResult(correctGestures, accuracy, averageConfidence, averageReactionTime, wrongMoves, openOk, closeOk, openTotal, closeTotal) {
+async function saveCurrentGameResult(correctGestures, accuracy, averageConfidence, averageReactionTime, wrongMoves) {
     if (!currentUser) return;
     document.getElementById("display-correct").textContent =
         (correctGestures != null && correctGestures !== "") ? correctGestures : "--";
@@ -399,27 +392,13 @@ async function saveCurrentGameResult(correctGestures, accuracy, averageConfidenc
     document.getElementById("display-time").textContent =
         wrongMoves != null ? `${wrongMoves}` : "--";
 
-    document.getElementById("display-time").textContent =
-        openOk != null ? `${openOk}` : "--";
-
-    document.getElementById("display-time").textContent =
-        closeOk != null ? `${closeOk}` : "--";
-    
-     document.getElementById("display-time").textContent =
-        openTotal != null ? `${openTotal}` : "--";
-
-    document.getElementById("display-time").textContent =
-        closeTotal != null ? `${closeTotal}` : "--";      
+  
     await saveScoreToFirebase(accuracy, {
         correctGestures: correctGestures,
         accuracy: accuracy,
         averageConfidence: averageConfidence,
         averageReactionTime: averageReactionTime,
-        wrongMoves: wrongMoves,
-        openOk: openOk,
-        closeOk: closeOk,
-        openTotal: openTotal,
-        closeTotal: closeTotal
+        wrongMoves: wrongMoves
     });
 
     await loadUserScores();

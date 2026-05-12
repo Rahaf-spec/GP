@@ -11,11 +11,7 @@ var successStreak = parseInt(localStorage.getItem('successStreak')) || 0;
 var totalCommands = 0;
 var correctGestures = 0;
 var wrongMoves = 0; 
-// الإحصاءات الجديدة للرسوم البيانية
-var correctOpenGestures = 0;  // عداد حركات الفتح الصحيحة
-var correctCloseGestures = 0; // عداد حركات الإغلاق الصحيحة
-var totalOpenCommands = 0;
-var totalCloseCommands = 0;
+
 var commandStartTime = 0;
 var currentCommand = null;
 var commandActive = false;
@@ -433,139 +429,249 @@ function drawWorld() {
 }
 
 function generateLevel() {
-    let pieceStart = screenWidth;
-    let lastWasHole = 0; 
-    let lastWasStructure = 0;
-    let pieceIndex = 0; 
+    let pieceStart = screenWidth;
+    let lastWasHole = 0;
+    let lastWasStructure = 0;
+    let pieceIndex = 0;
 
-    // 1. تحديد عدد الحفر المطلوب (3، 5، 7)
-    let totalHolesRequired = isAdaptiveMode ? (1 + (adaptiveLevel * 2)) : 3;
-    let holesBudget = totalHolesRequired;
-    worldHolesCoords = []; 
+    // 1. تحديد عدد الحفر المطلوب (3، 5، 7)
+    let totalHolesRequired = isAdaptiveMode ? (1 + (adaptiveLevel * 2)) : 3;
+    let holesBudget = totalHolesRequired;
+    worldHolesCoords = [];
+    // 2. حساب النطاق الفعلي وتوسيع المسافات
+    // نترك منطقة آمنة في البداية والنهاية
+    let usableStart = screenWidth * 1.5;
+    let usableEnd = worldWidth - (screenWidth * 2.0);
+    let totalUsableSpace = usableEnd - usableStart;
+    // المسافة بين كل حفرة وأخرى (ستكون طويلة في المستوى 1 وتقصر في المستوى 3)
+    let spacingBetweenHoles = totalUsableSpace / (totalHolesRequired + 1);
+    this.platformGroup = this.add.group();
+    this.fallProtectionGroup = this.add.group();
 
-    // 2. حساب النطاق الفعلي وتوسيع المسافات
-    // نترك منطقة آمنة في البداية والنهاية
-    let usableStart = screenWidth * 1.5;
-    let usableEnd = worldWidth - (screenWidth * 2.0); 
-    let totalUsableSpace = usableEnd - usableStart;
-    
-    // المسافة بين كل حفرة وأخرى (ستكون طويلة في المستوى 1 وتقصر في المستوى 3)
-    let spacingBetweenHoles = totalUsableSpace / (totalHolesRequired + 1);
+    this.blocksGroup = this.add.group();
 
-    this.platformGroup = this.add.group(); 
-    this.fallProtectionGroup = this.add.group();
-    this.blocksGroup = this.add.group(); 
-    this.constructionBlocksGroup = this.add.group();
-    this.misteryBlocksGroup = this.add.group(); 
-    this.immovableBlocksGroup = this.add.group();
+    this.constructionBlocksGroup = this.add.group();
 
-    // 3. حلقة البناء المستمرة حتى نهاية العالم
-    while (pieceStart < worldWidth) {
-        let shouldCreateHole = false;
+    this.misteryBlocksGroup = this.add.group();
 
-        // حساب موقع الحفرة القادمة بناءً على المسافة الموزعة
-        let nextHoleTarget = usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles;
+    this.immovableBlocksGroup = this.add.group();
 
-        if (!isTutorialMode && holesBudget > 0 && pieceStart >= (usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles)) {
-            if (lastWasHole <= 0 && lastWasStructure <= 0 && pieceStart < usableEnd) {
-                shouldCreateHole = true;
-                holesBudget--;
-            }
-        }
 
-        if (!shouldCreateHole) {
-            lastWasHole--;
-            
-            // رسم الأرضية الأساسية
-            let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
-            this.physics.add.existing(Npiece, true); 
-            Npiece.isPlatform = true; 
-            Npiece.depth = 2;
-            this.platformGroup.add(Npiece); 
-            this.physics.add.collider(player, Npiece);
 
-            // 4. ملء المسافات الطويلة بين الحفر (صناديق + وحوش)
-            // هذا الجزء سيضمن أن العالم لن يكون فارغاً أبداً
-            if (lastWasHole < 1 && lastWasStructure < 1 && pieceStart > screenWidth * 1.1 && pieceStart < usableEnd) {
-                
-                // إضافة وحش كل 10 قطع بشكل دوري
-                if (pieceIndex % 10 === 0) {
-                    if (typeof createSingleGoomba === 'function') {
-                        createSingleGoomba.call(this, pieceStart + 30, screenHeight - platformHeight - 50);
-                    }
-                }
-                
-                // إضافة صناديق وأنابيب كل 6 قطع (تكثيف المرحلة)
-                if (pieceIndex % 6 === 0) {
-                    if (typeof generateStructure === 'function') {
-                        lastWasStructure = generateStructure.call(this, pieceStart);
-                    }
-                }
-            } else { 
-                lastWasStructure--; 
-            }
-            
-        } else {
-            // إنشاء الحفرة
-            worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
-            lastWasHole = 3; // ضمان مسافة أمان بعد الحفرة
-            this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
-            this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
-        }
-        
-        pieceStart += platformPiecesWidth * 2;
-        pieceIndex++;
-    }
+    // 3. حلقة البناء المستمرة حتى نهاية العالم
 
-    // تفعيل الفيزياء لجميع المجموعات لضمان التفاعل
-    [this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup].forEach(group => {
-        this.physics.add.collider(player, group, group === this.misteryBlocksGroup ? revealHiddenBlock : destroyBlock, null, this);
-    });
+    while (pieceStart < worldWidth) {
 
-    // --- بقية الكود الخاص بالمشغلات (Triggers) والتصادمات ---
-    this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-    this.startScreenTrigger.depth = 4;
-    this.physics.add.existing(this.startScreenTrigger); 
-    this.startScreenTrigger.body.allowGravity = false; 
-    this.startScreenTrigger.body.immovable = true;
-    this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
+        let shouldCreateHole = false;
 
-    let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-    this.physics.add.existing(invisibleWall2); 
-    invisibleWall2.body.allowGravity = false; 
-    invisibleWall2.body.immovable = true;
-    this.physics.add.collider(player, invisibleWall2); 
-    this.fallProtectionGroup.add(invisibleWall2);
 
-    if (!isLevelOverworld) {
-        this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-        this.finalTrigger.depth = 2; 
-        this.physics.add.existing(this.finalTrigger); 
-        this.finalTrigger.body.allowGravity = false; 
-        this.finalTrigger.body.immovable = true;
-        this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
-    }
 
-    // تفعيل الخصائص الفيزيائية للمجموعات
-    [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup].forEach(group => {
-        group.getChildren().forEach(child => {
-            this.physics.add.existing(child, true);
-            child.body.allowGravity = false;
-            child.body.immovable = true;
-            child.depth = 2;
-            
-            // إضافة التصادمات بناءً على نوع المجموعة
-            if (group === this.misteryBlocksGroup) {
-                child.anims.play('mistery-block-default', true);
-                this.physics.add.collider(player, child, revealHiddenBlock, null, this);
-            } else if (group === this.blocksGroup || group === this.constructionBlocksGroup) {
-                this.physics.add.collider(player, child, destroyBlock, null, this);
-            } else if (group === this.immovableBlocksGroup) {
-                this.physics.add.collider(player, child);
-            } 
-        });
-    });
+        // حساب موقع الحفرة القادمة بناءً على المسافة الموزعة
+
+        let nextHoleTarget = usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles;
+
+
+
+        if (!isTutorialMode && holesBudget > 0 && pieceStart >= (usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles)) {
+
+            if (lastWasHole <= 0 && lastWasStructure <= 0 && pieceStart < usableEnd) {
+
+                shouldCreateHole = true;
+
+                holesBudget--;
+
+            }
+
+        }
+
+
+
+        if (!shouldCreateHole) {
+
+            lastWasHole--;
+
+           
+
+            // رسم الأرضية الأساسية
+
+            let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
+
+            this.physics.add.existing(Npiece, true);
+
+            Npiece.isPlatform = true;
+
+            Npiece.depth = 2;
+
+            this.platformGroup.add(Npiece);
+
+            this.physics.add.collider(player, Npiece);
+
+
+
+            // 4. ملء المسافات الطويلة بين الحفر (صناديق + وحوش)
+
+            // هذا الجزء سيضمن أن العالم لن يكون فارغاً أبداً
+
+            if (lastWasHole < 1 && lastWasStructure < 1 && pieceStart > screenWidth * 1.1 && pieceStart < usableEnd) {
+
+               
+
+                // إضافة وحش كل 10 قطع بشكل دوري
+
+                if (pieceIndex % 10 === 0) {
+
+                    if (typeof createSingleGoomba === 'function') {
+
+                        createSingleGoomba.call(this, pieceStart + 30, screenHeight - platformHeight - 50);
+
+                    }
+
+                }
+
+               
+
+                // إضافة صناديق وأنابيب كل 6 قطع (تكثيف المرحلة)
+
+                if (pieceIndex % 6 === 0) {
+
+                    if (typeof generateStructure === 'function') {
+
+                        lastWasStructure = generateStructure.call(this, pieceStart);
+
+                    }
+
+                }
+
+            } else {
+
+                lastWasStructure--;
+
+            }
+
+           
+
+        } else {
+
+            // إنشاء الحفرة
+
+            worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
+
+            lastWasHole = 3; // ضمان مسافة أمان بعد الحفرة
+
+            this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
+
+            this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
+
+        }
+
+       
+
+        pieceStart += platformPiecesWidth * 2;
+
+        pieceIndex++;
+
+    }
+
+
+
+    // تفعيل الفيزياء لجميع المجموعات لضمان التفاعل
+
+    [this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup].forEach(group => {
+
+        this.physics.add.collider(player, group, group === this.misteryBlocksGroup ? revealHiddenBlock : destroyBlock, null, this);
+
+    });
+
+
+
+    // --- بقية الكود الخاص بالمشغلات (Triggers) والتصادمات ---
+
+    this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
+
+    this.startScreenTrigger.depth = 4;
+
+    this.physics.add.existing(this.startScreenTrigger);
+
+    this.startScreenTrigger.body.allowGravity = false;
+
+    this.startScreenTrigger.body.immovable = true;
+
+    this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
+
+
+
+    let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
+
+    this.physics.add.existing(invisibleWall2);
+
+    invisibleWall2.body.allowGravity = false;
+
+    invisibleWall2.body.immovable = true;
+
+    this.physics.add.collider(player, invisibleWall2);
+
+    this.fallProtectionGroup.add(invisibleWall2);
+
+
+
+    if (!isLevelOverworld) {
+
+        this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
+
+        this.finalTrigger.depth = 2;
+
+        this.physics.add.existing(this.finalTrigger);
+
+        this.finalTrigger.body.allowGravity = false;
+
+        this.finalTrigger.body.immovable = true;
+
+        this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
+
+    }
+
+
+
+    // تفعيل الخصائص الفيزيائية للمجموعات
+
+    [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup].forEach(group => {
+
+        group.getChildren().forEach(child => {
+
+            this.physics.add.existing(child, true);
+
+            child.body.allowGravity = false;
+
+            child.body.immovable = true;
+
+            child.depth = 2;
+
+           
+
+            // إضافة التصادمات بناءً على نوع المجموعة
+
+            if (group === this.misteryBlocksGroup) {
+
+                child.anims.play('mistery-block-default', true);
+
+                this.physics.add.collider(player, child, revealHiddenBlock, null, this);
+
+            } else if (group === this.blocksGroup || group === this.constructionBlocksGroup) {
+
+                this.physics.add.collider(player, child, destroyBlock, null, this);
+
+            } else if (group === this.immovableBlocksGroup) {
+
+                this.physics.add.collider(player, child);
+
+            }
+
+        });
+
+    });
+
 }
+
 function destroyBlock(player, block) {
     if (!player.body.blocked.up) return;
 
@@ -783,11 +889,7 @@ function showResults(scene) {
             acc: accuracy,
             conf: avgConfidence,
             time: avgReaction,
-            wrong: wrongMoves,
-            openOk: correctOpenGestures,
-            closeOk: correctCloseGestures, 
-            openTotal: totalOpenCommands, // 🌟 إرسال الإجمالي
-            closeTotal: totalCloseCommands // 🌟 إرسال الإجمالي
+            wrong: wrongMoves
         });
         window.location.href = baseUrl + "?" + params.toString();
             }
@@ -802,24 +904,15 @@ function triggerCommand(scene, command, uiText) {
     scene.commandText.setText(uiText);
     updateTextBg(scene.commandText, scene.commandBg);
     totalCommands++;
-    if (command === "Open") totalOpenCommands++;
-    if (command === "Close") totalCloseCommands++;
 }
 
 function registerCorrectGesture(scene) {
     const reaction = (Date.now() - commandStartTime) / 1000;
     reactionTimes.push(reaction); correctGestures++; confidenceSum += aiConfidence; confidenceCount++;
     commandActive = false;
-// 🌟 التعديل الجديد: فرز الحركات الصحيحة حسب النوع
-    if (currentCommand === "Open") {
-        correctOpenGestures++;
-    } else if (currentCommand === "Close") {
-        correctCloseGestures++;
-    }
     scene.commandText.setText("🌟 عمل رائع! 🌟");
     updateTextBg(scene.commandText, scene.commandBg);
 }
-
 
 function update(delta) {
     // 1. تنظيف الأرضيات والوحوش (خلف اللاعب) لتحرير الذاكرة
@@ -894,47 +987,27 @@ function update(delta) {
     }
 
     // 5. التحكم في ماريو بناءً على الذكاء الاصطناعي
-    if (aiConfidence < 0.70) { 
-        aiGesture = "NoHand"; 
-    }
+    if (aiConfidence < 0.70) { aiGesture = "NoHand"; }
+    const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
+    const JUMP_POWER = velocityY * 1.3;
 
-    const RUN_SPEED = playerController.speed.run * KIDS_SPEED_MULTIPLIER;
-    const JUMP_POWER = velocityY * 1.3;
-
-    if (aiGesture === "Open") {
-        // التحقق إذا كان ماريو يركض والأمر المطلوب هو "فتح اليد"
-        if (commandActive && currentCommand === "Open") {
-            registerCorrectGesture(this);
-        } 
-        // 🌟 الجديد: إذا فتح يده والأمر كان "إغلاق" (قفز) يعتبر خطأ
-        else if (commandActive && currentCommand === "Close") {
-            registerWrongGesture(this); 
-        }
-
-        player.setVelocityX(RUN_SPEED);
-        player.flipX = false;
-        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') : 'run', true);
-    }
-    else if (aiGesture === "Close") {
-        // التحقق إذا كان ماريو يقفز والأمر المطلوب هو "إغلاق اليد"
-        if (commandActive && currentCommand === "Close") {
-            registerCorrectGesture(this);
-        } 
-        // 🌟 الجديد: إذا أغلق يده والأمر كان "افتح" (ركض) يعتبر خطأ
-        else if (commandActive && currentCommand === "Open") {
-            registerWrongGesture(this);
-        }
-
-        player.setVelocityX(RUN_SPEED * 1.8);
-        if (player.body.blocked.down) {
-            player.setVelocityY(-JUMP_POWER);
-            this.jumpSound.play();
-        }
-    }
-    else {
-        player.setVelocityX(0);
-        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle') : 'idle', true);
-    }
+    if (aiGesture === "Open") {
+        player.setVelocityX(RUN_SPEED); player.flipX = false;
+        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') : 'run', true);
+        if (commandActive && currentCommand === "Open") registerCorrectGesture(this);
+    }
+    else if (aiGesture === "Close") {
+        player.setVelocityX(RUN_SPEED * 1.8);
+        if (player.body.blocked.down) {
+            player.setVelocityY(-JUMP_POWER); 
+            this.jumpSound.play();
+            if (commandActive && currentCommand === "Close") registerCorrectGesture(this);
+        }
+    }
+    else {
+        player.setVelocityX(0);
+        player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-idle' : 'fire-mario-idle') : 'idle', true);
+    }
 
     // 6. التحكم في الكاميرا وحدود العالم
     const playerVelocityX = player.body.velocity.x;

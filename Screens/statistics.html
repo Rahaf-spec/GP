@@ -5,15 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAND HERO - إحصائيات الأداء</title>
     
-    <!-- استدعاء الخطوط والمكتبات -->
+    <!-- استدعاء نفس الخط المستخدم في الواجهة الأساسية -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- استدعاء مكتبة الرسوم البيانية -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- ربط ملف الـ CSS الأساسي ليرث الألوان والتنسيقات -->
     <link rel="stylesheet" href="style.css">
 
     <style>
+        /* تنسيقات إضافية لضمان تطابق الصفحة مع روح اللعبة */
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #fdfaf3;
+            background-color: #fdfaf3; /* نفس الخلفية الكريمية */
             margin: 0;
             padding: 20px;
             display: flex;
@@ -23,9 +28,10 @@
 
         .container {
             width: 100%;
-            max-width: 800px; 
+            max-width: 700px;
         }
 
+        /* تنسيق الهيدر ليطابق واجهتك */
         .header-section {
             display: flex;
             align-items: center;
@@ -47,18 +53,14 @@
             right: 0;
         }
 
+        /* تنسيق بطاقات الرسوم البيانية لتشبه result-card و card */
         .chart-card {
             background: white;
-            border: 4px solid #efe3d0;
+            border: 4px solid #efe3d0; /* نفس سمك حدود بطاقاتك */
             border-radius: 25px;
             padding: 25px;
             margin-bottom: 30px;
-            box-shadow: 0 8px 0 #efe3d0;
-            transition: transform 0.2s ease;
-        }
-
-        .chart-card:hover {
-            transform: translateY(-5px);
+            box-shadow: 0 8px 0 #efe3d0; /* ظل كرتوني يشبه استايل اللعبة */
         }
 
         .chart-card h3 {
@@ -77,70 +79,44 @@
             font-weight: bold;
         }
 
+        /* لضمان ظهور الرسوم بشكل جيد داخل البطاقات */
         canvas {
             max-width: 100%;
-            height: auto !important;
-        }
-
-        /* تنسيق إضافي للأزرار ليتناسب مع الهوية */
-        .small-btn {
-            padding: 8px 20px;
-            border-radius: 15px;
-            cursor: pointer;
-            font-family: 'Cairo', sans-serif;
-            font-weight: bold;
-            border: none;
-            box-shadow: 0 4px 0 #ccc;
-            background-color: #e0e0e0;
-            color: #555;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
+        <!-- الهيدر متطابق مع طلبك (الزر يمين والعنوان وسط) -->
         <div class="header-section">
             <div class="back-row">
-                <button class="small-btn" onclick="window.location.href='index.html'">رجوع</button>
+                <button class="small-btn btn-gray" onclick="window.location.href='index.html'">رجوع</button>
             </div>
-            <h1>إحصائيات البطل 🏆</h1>
+            <h1>إحصائيات الأداء</h1>
         </div>
 
-        <p id="loadingText">جاري جلب بيانات بطلنا وتحليلها...</p>
+        <p id="loadingText">جاري جلب بيانات بطلنا ...</p>
 
-        <!-- 1. الدقة الكلية -->
+        <!-- المربع الأول: الدقة (باللون البني الأساسي) -->
         <div class="chart-card">
-            <h3>📈 مستوى الدقة العام (%)</h3>
+            <h3>📈 مستوى الدقة لكل لعبة</h3>
             <canvas id="accuracyChart"></canvas>
         </div>
 
-        <!-- 2. دقة حركة الفتح بنسبة مئوية -->
+        <!-- المربع الثاني: وقت الاستجابة (باللون الأصفر/الذهبي) -->
         <div class="chart-card">
-            <h3>🟢 فتح اليد بشكل صحيح(Open) %</h3>
-            <canvas id="openGestureChart"></canvas>
-        </div>
-
-        <!-- 3. دقة حركة الإغلاق بنسبة مئوية -->
-        <div class="chart-card">
-            <h3>🔵   إغلاق اليد بشكل صحيح (Close) %</h3>
-            <canvas id="closeGestureChart"></canvas>
-        </div>
-
-        <!-- 4. وقت الاستجابة -->
-        <div class="chart-card">
-            <h3>⏱️ سرعة الاستجابة (ثواني)</h3>
+            <h3>⏱️ سرعة استجابة اللاعب (ثواني)</h3>
             <canvas id="reactionChart"></canvas>
         </div>
 
-        <!-- 5. الأخطاء -->
+        <!-- المربع الثالث: الأخطاء (باللون الوردي/الأحمر) -->
         <div class="chart-card">
-            <h3>⚠️ رصد الحركات الخاطئة</h3>
+            <h3>⚠️ رصد الحركات الخاطئة للاعب</h3>
             <canvas id="wrongMovesChart"></canvas>
         </div>
-        
     </div>
 
-    
     <script type="module" src="stats.js"></script>
 </body>
 </html>
