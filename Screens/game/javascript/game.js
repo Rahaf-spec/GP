@@ -447,175 +447,82 @@ function generateLevel() {
     let spacingBetweenHoles = totalUsableSpace / (totalHolesRequired + 1);
     this.platformGroup = this.add.group();
     this.fallProtectionGroup = this.add.group();
-
     this.blocksGroup = this.add.group();
-
     this.constructionBlocksGroup = this.add.group();
-
     this.misteryBlocksGroup = this.add.group();
-
     this.immovableBlocksGroup = this.add.group();
-
-
-
     // 3. حلقة البناء المستمرة حتى نهاية العالم
 
     while (pieceStart < worldWidth) {
 
         let shouldCreateHole = false;
-
-
-
         // حساب موقع الحفرة القادمة بناءً على المسافة الموزعة
-
         let nextHoleTarget = usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles;
-
-
-
         if (!isTutorialMode && holesBudget > 0 && pieceStart >= (usableStart + (totalHolesRequired - holesBudget + 1) * spacingBetweenHoles)) {
-
             if (lastWasHole <= 0 && lastWasStructure <= 0 && pieceStart < usableEnd) {
-
                 shouldCreateHole = true;
-
                 holesBudget--;
-
             }
-
         }
-
-
-
         if (!shouldCreateHole) {
 
             lastWasHole--;
-
-           
-
             // رسم الأرضية الأساسية
-
             let Npiece = this.add.tileSprite(pieceStart, screenHeight, platformPiecesWidth, platformHeight, 'floorbricks').setScale(2).setOrigin(0, 0.5);
-
             this.physics.add.existing(Npiece, true);
-
             Npiece.isPlatform = true;
-
             Npiece.depth = 2;
-
             this.platformGroup.add(Npiece);
-
             this.physics.add.collider(player, Npiece);
 
-
-
             // 4. ملء المسافات الطويلة بين الحفر (صناديق + وحوش)
-
             // هذا الجزء سيضمن أن العالم لن يكون فارغاً أبداً
-
             if (lastWasHole < 1 && lastWasStructure < 1 && pieceStart > screenWidth * 1.1 && pieceStart < usableEnd) {
-
-               
-
                 // إضافة وحش كل 10 قطع بشكل دوري
 
                 if (pieceIndex % 10 === 0) {
-
                     if (typeof createSingleGoomba === 'function') {
-
                         createSingleGoomba.call(this, pieceStart + 30, screenHeight - platformHeight - 50);
-
                     }
-
                 }
-
-               
-
                 // إضافة صناديق وأنابيب كل 6 قطع (تكثيف المرحلة)
-
                 if (pieceIndex % 6 === 0) {
-
                     if (typeof generateStructure === 'function') {
-
                         lastWasStructure = generateStructure.call(this, pieceStart);
-
                     }
-
                 }
-
             } else {
-
                 lastWasStructure--;
-
             }
 
-           
-
         } else {
-
             // إنشاء الحفرة
-
             worldHolesCoords.push({ start: pieceStart, end: pieceStart + platformPiecesWidth * 2});
-
             lastWasHole = 3; // ضمان مسافة أمان بعد الحفرة
-
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart + platformPiecesWidth * 2, screenHeight - platformHeight, 5, 5).setOrigin(0, 1));
-
             this.fallProtectionGroup.add(this.add.rectangle(pieceStart, screenHeight - platformHeight, 5, 5).setOrigin(1, 1));
-
         }
-
-       
-
         pieceStart += platformPiecesWidth * 2;
-
         pieceIndex++;
-
     }
-
-
-
     // تفعيل الفيزياء لجميع المجموعات لضمان التفاعل
-
     [this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup].forEach(group => {
-
         this.physics.add.collider(player, group, group === this.misteryBlocksGroup ? revealHiddenBlock : destroyBlock, null, this);
-
     });
-
-
-
     // --- بقية الكود الخاص بالمشغلات (Triggers) والتصادمات ---
-
     this.startScreenTrigger = this.add.tileSprite(screenWidth, screenHeight - platformHeight, 32, 28, 'horizontal-tube').setScale(screenHeight / 345).setOrigin(1, 1);
-
     this.startScreenTrigger.depth = 4;
-
     this.physics.add.existing(this.startScreenTrigger);
-
     this.startScreenTrigger.body.allowGravity = false;
-
     this.startScreenTrigger.body.immovable = true;
-
     this.physics.add.collider(player, this.startScreenTrigger, startLevel, null, this);
-
-
-
     let invisibleWall2 = this.add.rectangle(screenWidth, screenHeight - platformHeight, 1, screenHeight).setOrigin(0.5, 1);
-
     this.physics.add.existing(invisibleWall2);
-
     invisibleWall2.body.allowGravity = false;
-
     invisibleWall2.body.immovable = true;
-
     this.physics.add.collider(player, invisibleWall2);
-
     this.fallProtectionGroup.add(invisibleWall2);
-
-
-
     if (!isLevelOverworld) {
-
         this.finalTrigger = this.add.tileSprite(worldWidth - screenWidth * 1.03, screenHeight - platformHeight, 40, 31, 'horizontal-final-tube').setScale(screenHeight / 345).setOrigin(1, 1);
 
         this.finalTrigger.depth = 2;
@@ -629,45 +536,23 @@ function generateLevel() {
         this.physics.add.collider(player, this.finalTrigger, teleportToLevelEnd, null, this);
 
     }
-
-
-
     // تفعيل الخصائص الفيزيائية للمجموعات
-
     [this.fallProtectionGroup, this.misteryBlocksGroup, this.blocksGroup, this.constructionBlocksGroup, this.immovableBlocksGroup].forEach(group => {
-
         group.getChildren().forEach(child => {
-
             this.physics.add.existing(child, true);
-
             child.body.allowGravity = false;
-
             child.body.immovable = true;
-
             child.depth = 2;
-
-           
-
             // إضافة التصادمات بناءً على نوع المجموعة
-
             if (group === this.misteryBlocksGroup) {
-
                 child.anims.play('mistery-block-default', true);
-
                 this.physics.add.collider(player, child, revealHiddenBlock, null, this);
-
             } else if (group === this.blocksGroup || group === this.constructionBlocksGroup) {
-
                 this.physics.add.collider(player, child, destroyBlock, null, this);
-
             } else if (group === this.immovableBlocksGroup) {
-
                 this.physics.add.collider(player, child);
-
             }
-
         });
-
     });
 
 }
