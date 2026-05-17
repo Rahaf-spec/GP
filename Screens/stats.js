@@ -24,7 +24,7 @@
         });
 
         function renderCharts(games) {
-            // ألوان مستوحاة من واجهتك (btn-green, btn-purple, btn-pink)
+            // ألوان مستوحاة من الواجهة (btn-green, btn-purple, btn-pink)
             const colorPurple = '#a55eea'; 
             const colorGreen = '#26de81';
             const colorPink = '#ff006e';
