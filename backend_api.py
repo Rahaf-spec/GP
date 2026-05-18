@@ -91,7 +91,7 @@ def camera_loop():
 
     while True:
 
-        #  إذا الكاميرا مو شغالة لا تسوي شيء
+        #  if the camera is not running don't do anything, just wait a bit and check again
         if not camera_running:
             time.sleep(0.1)
             continue
@@ -142,16 +142,16 @@ def get_gesture():
     return JSONResponse(latest_prediction)
     
 
-#  تشغيل الكاميرا
+#  turn on the camera 
 @app.get("/start")
 def start_camera():
     global cap, camera_running
     
-    #  إذا كانت الكاميرا تعمل فعلياً، لا تفعل شيئاً
+    # if the camera is already running, just return a message without re-initializing it
     if camera_running and cap is not None and cap.isOpened():
         return {"status": "camera already running"}
     
-    #  إعادة تهيئة الكاميرا
+    #  re-initialize the camera 
     cap = cv2.VideoCapture(1) 
     
     if not cap.isOpened():
@@ -168,9 +168,9 @@ def stop_camera():
     camera_running = False
     
     if cap is not None:
-        cap.release()    # هذا السطر الذي يطفئ الكاميرا فعلياً
-        cap = None       # إعادة التعيين لضمان إمكانية فتحها مرة أخرى لاحقاً
-        cv2.destroyAllWindows() # إغلاق أي نافذة عرض من OpenCV
+        cap.release()    # this frees the camera 
+        cap = None       # reset the camera variable to None to avoid accidental use
+        cv2.destroyAllWindows() # close any OpenCV windows if they were opened
         
     print("Camera has been released successfully")
     return {"status": "camera stopped"}
@@ -187,7 +187,7 @@ and streams them to the webpage.
 def generate_frames():
     while True:
 
-        #  إذا الكاميرا مو شغالة لا تبث
+        #  if the camera is not running, don't do anything
         if not camera_running:
             time.sleep(0.1)
             continue
