@@ -1023,7 +1023,7 @@ function update(delta) {
 
     // Execute "Open" Gesture Logic -> Move Character Forward.
     if (aiGesture === "Open") {
-        player.setVelocityX(RUN_SPEED*2); 
+        player.setVelocityX(RUN_SPEED); 
         player.flipX = false;
         player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') : 'run', true);
         
