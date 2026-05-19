@@ -223,7 +223,19 @@ body::after {
     margin-bottom: 24px;
     font-weight: 800;
 }
+.btn-info {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    margin: 0 5px;
+    vertical-align: middle;
+    transition: transform 0.2s;
+}
 
+.btn-info:hover {
+    transform: scale(1.2); /* يكبر شوي إذا حطيتي الماوس عليه */
+}
 
 /* CHARACTER */
 

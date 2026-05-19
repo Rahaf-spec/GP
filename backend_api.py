@@ -68,7 +68,7 @@ is running, and a dictionary to store the AI's most recent guess.
 """
 # ------------------ CAMERA CONTROL ------------------
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 
 camera_running = False   # ⭐⭐⭐⭐⭐⭐
 # This stores the latest AI decision so the game can ask for it anytime
@@ -152,7 +152,7 @@ def start_camera():
         return {"status": "camera already running"}
     
     #  re-initialize the camera 
-    cap = cv2.VideoCapture(1) 
+    cap = cv2.VideoCapture(0) 
     
     if not cap.isOpened():
         return {"status": "error", "message": "Could not open video device"}

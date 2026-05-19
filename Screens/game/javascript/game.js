@@ -177,7 +177,7 @@ function fetchGesture() {
 
 setInterval(fetchGesture, 100);
 
-function togglePause() {
+/*function togglePause() {
     if (gameOver || gameWinned || !levelStarted) return;
 
     gamePaused = !gamePaused;
@@ -205,8 +205,68 @@ function togglePause() {
         this.commandText.setText(currentCommand === "Close" ? "⚠️ اغلق يدك للقفز ⚠️" : "🟢 افتح يدك للركض 🟢");
         updateTextBg(this.commandText, this.commandBg);
     }
-}
+}*/
 
+function togglePause() {
+    if (gameOver || gameWinned || !levelStarted) return;
+
+    gamePaused = !gamePaused;
+
+    if (gamePaused) {
+        this.physics.pause();
+        this.anims.pauseAll();
+        this.pauseSound.play();
+        
+        pauseText.setVisible(true);
+        this.pauseBg.setVisible(true);
+        this.commandText.setText("⏸️ اللعبة متوقفة ⏸️");
+        updateTextBg(this.commandText, this.commandBg);
+        
+        this.pauseOverlay = this.add.rectangle(0, 0, worldWidth, screenHeight, 0x000000, 0.4)
+            .setOrigin(0).setScrollFactor(0).setDepth(2000);
+
+    
+        this.exitButton = this.add.text(screenWidth / 2, screenHeight / 2 + 120, " خروج من اللعبة", {
+            fontFamily: '"Courier New", Courier, monospace',
+            fontSize: "32px",
+            fill: "#ffffff",
+            backgroundColor: "#d58814", 
+            padding: { x: 20, y: 15 },
+            align: "center"
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(3000).setInteractive();
+
+        
+        this.exitButton.on('pointerdown', async (pointer, localX, localY, event) => {
+            event.stopPropagation(); 
+            
+            
+            try {
+                console.log("Stopping camera...");
+                await fetch("http://127.0.0.1:8000/stop");
+            } catch (error) {
+                console.error("Error stopping camera:", error);
+            }
+            
+           window.location.href = "../index.html"; 
+        });
+
+    } else {
+        this.physics.resume();
+        this.anims.resumeAll();
+        this.pauseSound.play();
+        
+        pauseText.setVisible(false);
+        this.pauseBg.setVisible(false);
+        
+        if (this.pauseOverlay) this.pauseOverlay.destroy();
+        
+    
+        if (this.exitButton) this.exitButton.destroy();
+
+        this.commandText.setText(currentCommand === "Close" ? "⚠️ اغلق يدك للقفز ⚠️" : "🟢 افتح يدك للركض 🟢");
+        updateTextBg(this.commandText, this.commandBg);
+    }
+}
 var SmoothedHorionztalControl = new Phaser.Class({
     initialize:
     function SmoothedHorionztalControl(speed) {
@@ -963,7 +1023,7 @@ function update(delta) {
 
     // Execute "Open" Gesture Logic -> Move Character Forward.
     if (aiGesture === "Open") {
-        player.setVelocityX(RUN_SPEED); 
+        player.setVelocityX(RUN_SPEED*2); 
         player.flipX = false;
         player.anims.play(playerState > 0 ? (playerState == 1 ? 'grown-mario-run' : 'fire-mario-run') : 'run', true);
         

@@ -8,8 +8,31 @@
 
     <link rel="stylesheet" href="style.css">
 
-    <!-- Font -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        .custom-modal {
+            display: none; 
+            position: fixed !important; 
+            top: 0 !important; 
+            left: 0 !important; 
+            width: 100vw !important; 
+            height: 100vh !important; 
+            background-color: rgba(0, 0, 0, 0.5) !important; /* لون شفاف أسود */
+            backdrop-filter: blur(5px) !important; /* تضبيب الخلفية */
+            z-index: 999999 !important; /* أعلى طبقة في الصفحة */
+        }
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
 </head>
 
 <body>
@@ -20,13 +43,10 @@
 
     <div class="container">
 
-        <!-- HEADER -->
         <div class="header">
             <h1>HAND HERO</h1>
-
         </div>
 
-        <!-- SIGN IN -->
         <div id="signin" class="screen active">
             <div class="grid-2 one-col">
                 <div class="card">
@@ -36,8 +56,6 @@
                         <div class="subtitle">ابدأ رحلتك في اللعبة</div>
                     </div>
 
-                    <!-- <input type="text" placeholder="Full Name" id="signName">-->
-                    <!--  <input type="text" placeholder="Username" id="signUser"-->
                     <input type="email" placeholder="البريد الإلكتروني" id="signEmail">
                     <input type="password" placeholder="كلمة المرور" id="signPass">
 
@@ -51,7 +69,6 @@
             </div>
         </div>
 
-        <!-- LOGIN -->
         <div id="login" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('signin')">رجوع</button>
@@ -78,7 +95,6 @@
             </div>
         </div>
 
-        <!-- HOME -->
         <div id="home" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('login')">رجوع</button>
@@ -90,8 +106,9 @@
                 </div>
 
                 <div class="title">أهلًا بعودتك!</div>
-                <div class="small-text">اختار المرحلة وابدأ اللعب</div>
-
+                
+                <div class="small-text">اختار المرحلة وابدأ اللعب <button onclick="openModesInfo()" class="btn-info" title="شرح الأطوار">ℹ️ </button></div>
+                
                 <div class="action-buttons one-col">
                     <div id="adaptive-info" style="margin: 10px; padding: 10px; background: #eee; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
                         <span>
@@ -99,32 +116,20 @@
                             <span id="current-lvl" style="font-weight: bold; color: #2ecc71;">1</span>
                         </span>
 
-                        <!-- زر التصفير الصغير بأيقونة -->
                         <button onclick="resetAdaptiveMode()" class="btn-reset-icon" title="تصفير المستوى">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
                         </button>
                     </div>
 
-                    <!-- هيكل النافذة المنبثقة المخصصة (Modal) -->
-                    <div id="resetModal" class="custom-modal">
-                        <div class="modal-content">
-                            <h3>هل أنت متأكد؟</h3>
-                            <p>سيتم إعادة تعيين مستواك الحالي إلى المستوى الأول.</p>
-                            <div class="modal-buttons">
-                                <button class="btn-confirm" onclick="confirmReset()">نعم، تصفير</button>
-                                <button class="btn-cancel" onclick="closeResetModal()">إلغاء</button>
-                            </div>
-                        </div>
-                    </div>
                     <button class="btn btn-blue" onclick="startTutorial()">الطور التعليمي</button>
                     <button class="btn btn-pink" onclick="startGame()">الطور العادي</button>
                     <button class="btn btn-green" onclick="startAdaptiveMode()">الطور التكيفي</button>
+                    
                     <div style="display: flex; justify-content: center; gap: 10px; width: 100%; margin: 15px 0;">
                         <button class="btn btn-gray" onclick="showAllHistory()" style="flex: 1; max-width: 200px;">تاريخ النتائج</button>
                         <button class="btn btn-gray" onclick="window.location.href='statistics.html'" style="flex: 1; max-width: 200px;">إحصائيات الأداء</button>
                     </div>
                     <a href="index.html" class="back-btn"> </a>
-                   
                 </div>
 
                 <div id="scoreHistoryBox" class="history-box">
@@ -134,7 +139,6 @@
             </div>
         </div>
 
-        <!-- RESULTS -->
         <div id="results" class="screen">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="showScreen('home')">رجوع</button>
@@ -142,7 +146,7 @@
 
             <div class="result-card">
                 <div class="emoji">🏆</div>
-                <div class="title">أحسنت!</div>
+                <div class="title">أحسنت! </div> 
 
                 <div class="score-row">
                     <span>الإيماءات الصحيحة</span>
@@ -155,7 +159,9 @@
                 </div>
 
                 <div class="score-row">
-                    <span>متوسط الثقة</span>
+                    <span>متوسط الثقة  
+                        <button onclick="openConfidenceInfo()" class="btn-info" title="ما هو متوسط الثقة؟">ℹ️</button> 
+                    </span>
                     <strong id="display-confidence">--</strong>
                 </div>
 
@@ -177,7 +183,77 @@
 
     </div>
 
-    <script type="module" src="script.js"></script>
-</body>
+    <div id="modesInfoModal" class="custom-modal">
+        <div class="modal-content" style="width: 450px; text-align: right;"> 
+            <h3 style="text-align: center; color: #0D47A1; margin-bottom: 25px; ">شرح أطوار اللعب</h3>
+            <ul style="list-style-type: none; padding: 0; line-height: 1.8; font-size: 14px;">
+                <li><strong> الطور التعليمي (Tutorial):</strong> بيئة آمنة بدون عقبات لتدريب الطفل على ربط حركة يده بالكاميرا.</li>
+                <li style="margin-top: 10px;"><strong> الطور العادي (Normal):</strong> اللعبة الأساسية بعدد ثابت من العقبات، لتقييم الأداء بشكل قياسي.</li>
+                <li style="margin-top: 10px;"><strong> الطور التكيفي (Adaptive):</strong> ذكاء اصطناعي يحلل أداء الطفل؛ إذا حقق دقة 90%، تزيد الصعوبة تلقائياً في الجلسات القادمة لضمان تطوره.</li>
+            </ul>
+            <div class="modal-buttons" style="text-align: center; margin-top: 20px;">
+                <button class="btn-cancel" onclick="closeModesInfo()">إغلاق الشرح</button>
+            </div>
+        </div>
+    </div>
 
+    <div id="resetModal" class="custom-modal">
+        <div class="modal-content" style="width: 350px; text-align: center;">
+            <h3 style="color: #d32f2f; margin-bottom: 15px;">هل أنت متأكد؟</h3>
+            <p style="font-size: 16px;">سيتم إعادة تعيين مستواك الحالي في الطور التكيفي إلى المستوى الأول.</p>
+            <div class="modal-buttons" style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                <button class="btn btn-blue" onclick="confirmReset()">نعم، تصفير</button>
+                <button class="btn btn-gray" onclick="closeResetModal()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="confidenceInfoModal" class="custom-modal">
+        <div class="modal-content" style="width: 400px; text-align: right;">
+            <h3 style="text-align: center; color: #0D47A1; margin-bottom: 15px;">متوسط الثقة (AI Confidence)</h3>
+            <p style="line-height: 1.8; font-size: 14px; margin: 0;">
+                هذا الرقم لا يقيس فقط دقة الذكاء الاصطناعي، بل يعكس <strong>جودة ومدى اكتمال تنفيذ الأمر من قبل الطفل</strong>.<br><br> 
+                إذا كان الرقم منخفضاً (مثلاً 0.70)، فهذا لا يعني خطأ أو ضعف رصد من النظام، بل يعني غالباً أن الطفل قام بـ "حركة غير مكتملة" (مثل إغلاق اليد بضعف). ارتفاع هذا الرقم بمرور الجلسات يدل على تحسن الطفل.
+            </p>
+            <div class="modal-buttons" style="text-align: center; margin-top: 20px;">
+                <button class="btn-cancel" onclick="closeConfidenceInfo()">إغلاق</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+    <script>
+        function openModesInfo() {
+            document.getElementById("modesInfoModal").style.display = "block";
+        }
+
+        function closeModesInfo() {
+            document.getElementById("modesInfoModal").style.display = "none";
+        }
+
+        function openConfidenceInfo() {
+            document.getElementById("confidenceInfoModal").style.display = "block";
+        }
+
+        function closeConfidenceInfo() {
+            document.getElementById("confidenceInfoModal").style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            let modesModal = document.getElementById("modesInfoModal");
+            let confModal = document.getElementById("confidenceInfoModal");
+            let resetModal = document.getElementById("resetModal"); 
+            
+            if (event.target == modesModal) {
+                modesModal.style.display = "none";
+            }
+            if (event.target == confModal) {
+                confModal.style.display = "none";
+            }
+            if (event.target == resetModal) {
+                resetModal.style.display = "none";
+            }
+        }
+    </script>
+</body>
 </html>
