@@ -12,7 +12,7 @@ import {
     get
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-//  ⭐⭐⭐⭐⭐⭐ المتغيرات العامة 
+//  General variables
 let scores = {
     current: 0,
     history: [],
@@ -21,7 +21,7 @@ let scores = {
 
 let currentUser = null;
 
-//  ⭐⭐⭐⭐⭐⭐ مراقبة حالة المستخدم (ضروري عند العودة من اللعبة) 
+//  Monitoring user status (essential when returning from the game)
 onAuthStateChanged(auth, (user) => {
     const urlParams = new URLSearchParams(window.location.search);
     const isGameOver = urlParams.get('status') === 'gameover';
@@ -31,18 +31,18 @@ onAuthStateChanged(auth, (user) => {
         currentUser = user;
         console.log("User is signed in:", user.email);
         
-        // 1. تحميل البيانات من Firebase
+        // 1. Download data from Firebase
         loadUserScores(); 
 
-        // 2. تحديد الشاشة التي يجب إظهارها
+        // 2. Select the screen that should be displayed
         if (isGameOver) {
-            // إذا كان عائد بنتيجة، نفتح شاشة النتائج
+            // If it returns a result, we open the results screen.
             showScreen('results');
         } else if (isFinishedTutorial) {
-            // إذا كان عائد من التتوريال، نفتح شاشة الهوم
+            // If returning from the tutorial, open the home screen.
             showScreen('home');
         } else {
-            // الحالة الافتراضية: إذا فتح الموقع وهو مسجل دخول، يذهب للهوم مباشرة
+            // Default state: If the site is opened while logged in, it goes directly to the homepage.
             showScreen('home');
         }
 
@@ -50,7 +50,7 @@ onAuthStateChanged(auth, (user) => {
         currentUser = null;
         console.log("No user signed in.");
         
-        // إذا لم يكن مسجلاً، نعيده لصفحة تسجيل الدخول
+        // If he is not registered, we will return him to the login page.
         showScreen('signin');
     }
 });
@@ -64,7 +64,7 @@ function showScreen(screenId) {
     if (screenId === 'results') updateResults();
 }
 
-// ⭐⭐⭐⭐⭐⭐ لايقاف الكاميرا بعد الانتهاء من اللعبة
+// Turn off the camera after finishing the game
 async function stopCamera() {
     try {
         console.log("Stopping camera...");
@@ -73,65 +73,64 @@ async function stopCamera() {
         console.error("Error stopping camera:", error);
     }
 }
-// وظيفة لفتح النافذة المنبثقة
+// Function to open the pop-up window
 window.resetAdaptiveMode = function() {
     const modal = document.getElementById('resetModal');
     modal.style.display = 'block';
 }
 
-// وظيفة لإغلاق النافذة
+// Window closing function
 window.closeResetModal = function() {
     const modal = document.getElementById('resetModal');
     modal.style.display = 'none';
 }
 
-// وظيفة التأكيد النهائي ومسح البيانات
+// Final confirmation and data scanning function
 window.confirmReset = function() {
     localStorage.setItem('adaptiveLevel', 1);
     localStorage.setItem('successStreak', 0);
     
-    // إخفاء النافذة وتحديث الصفحة
+    // Hide window and refresh page
     closeResetModal();
     location.reload();
 }
 
-// إغلاق النافذة عند الضغط خارجها
+// The window closes when pressed outside.
 window.onclick = function(event) {
     const modal = document.getElementById('resetModal');
     if (event.target == modal) {
         closeResetModal();
     }
 }
-//⭐⭐⭐⭐⭐⭐ معالجة نتائج اللعبة القادمة من Phaser 
+//Processing the results of the upcoming game from Phaser 
 function updateResults() {
     const urlParams = new URLSearchParams(window.location.search);
 
-    // 1. التعامل مع نهاية طور التعليم (Tutorial)
+    // 1. Dealing with the end of the learning phase (Tutorial)
     if (urlParams.get('mode') === 'finished_tutorial') {
-        // إيقاف الكاميرا فوراً
+        //Turn off the camera immediately
         stopCamera();
         
-        // التوجه لشاشة الهوم بدلاً من البقاء في شاشة الدخول
+        // Go to the home screen instead of staying on the login screen.
         showScreen('home');
 
-        // تنظيف الرابط
+        // Clean the URL
         //window.history.replaceState({}, document.title, window.location.pathname);
-        return; // الخروج من الدالة لأننا لا نحتاج لحفظ بيانات
+        return; 
     }
 
-    // 2. التعامل مع نهاية اللعبة العادية (Game Over)
+    // 2. Dealing with the normal end of the game (Game Over)
     if (urlParams.get('status') === 'gameover') {
-        // استلام البيانات من الرابط
+        // Receive data from the link
         const gameData = {
             correctGestures: urlParams.get('correct') || "0/0",
             accuracy: urlParams.get('acc') || "0",
             averageConfidence: urlParams.get('conf') || "0.00",
             averageReactionTime: urlParams.get('time') || "0.00",
-            wrongMoves: urlParams.get('wrong') || "0", // استلام القيمة الجديدة
-         
+            wrongMoves: urlParams.get('wrong') || "0",
         };
 
-        // تحديث واجهة الـ HTML
+        // HTML interface update
         if (document.getElementById('display-correct')) {
             document.getElementById('display-correct').innerText = gameData.correctGestures;
             document.getElementById('display-accuracy').innerText = gameData.accuracy + "%";
@@ -140,11 +139,11 @@ function updateResults() {
             document.getElementById('display-wrong').innerText = gameData.wrongMoves;
         }
 
-        // حفظ النتيجة في Firebase
+        // Save the result on Firebase
         if (currentUser) {
             saveScoreToFirebase(gameData.accuracy, gameData);
         }
-        // إيقاف الكاميرا
+     
         stopCamera();
         //window.history.replaceState({}, document.title, window.location.pathname);
         return;
@@ -233,24 +232,24 @@ async function loadUserScores() {
     }
 }
 
-// --- وظائف الواجهة (UI Functions) ---
-// دالة لتحديث عرض المستوى في الواجهة
+//--- UI Functions ---
+// Function to update the level display in the interface
 
 function updateLevelDisplay() {
-    // جلب المستوى من localStorage، وإذا لم يوجد نعتبره 1
+    // Retrieve the level from localStorage; if it doesn't exist, consider it to be 1.
     const savedLevel = localStorage.getItem('adaptiveLevel') || 1;
     
-    // البحث عن العنصر في HTML وتغيير النص بداخله
+    // Finding an element in HTML and changing the text inside it
     const levelElement = document.getElementById('current-lvl');
     if (levelElement) {
         levelElement.innerText = savedLevel;
     }
 }
-// تشغيل الدالة فور تحميل الصفحة
+// Run the function immediately after the page loads.
 window.onload = function() {
     updateLevelDisplay();
-    // إذا كان لديك دوال أخرى تعمل عند التحميل أضفها هنا أيضاً
 };
+// Starting game and open camera
 async function startGame() {
     if (!currentUser) {
         alert("Please login first");
@@ -266,7 +265,7 @@ async function startGame() {
         window.location.href = "game/game.html";
     }, 1000);
 }
-// دالة تشغيل طور التعليم
+// Learning phase activation function
 window.startTutorial = async function() {
     if (!currentUser) {
         alert("Please login first");
@@ -274,15 +273,15 @@ window.startTutorial = async function() {
         return;
     }
 
-    // تشغيل الكاميرا عبر البايثون كالمعتاد
+    // Operating the camera via Python as usual
     await fetch("http://127.0.0.1:8000/start");
 
-    // التوجيه للعبة مع إرسال كلمة tutorial في الرابط
+    // Instructions for the game, including the word "tutorial" in the link.
     setTimeout(() => {
         window.location.href = "game/game.html?mode=tutorial";
     }, 1000);
 }
-// دالة تشغيل المود التكيفي
+// Adaptive mode activation function
 window.startAdaptiveMode = async function() {
     if (!currentUser) {
         alert("Please login first");
@@ -290,23 +289,22 @@ window.startAdaptiveMode = async function() {
         return;
     }
 
-    // تشغيل الكاميرا عبر البايثون كالمعتاد
     await fetch("http://127.0.0.1:8000/start");
 
-    // التوجيه للعبة مع إرسال كلمة adaptive في الرابط
+    // The instructions for the game include the word "adaptive" in the link.
     setTimeout(() => {
         window.location.href = "game/game.html?mode=adaptive";
     }, 1000);
 }
-// دالة إعادة اللعب المصلحة
+// Play Again function
 window.playAgain = async function() {
-    // 1. الحصول على المود من الرابط الحالي لصفحة النتائج
+    // 1.Get the mod from the current link to the results page
     const urlParams = new URLSearchParams(window.location.search);
     const lastMode = urlParams.get('mode'); 
 
     console.log("Replaying mode:", lastMode);
 
-    // 2. فحص المود وتوجيه اللاعب للدالة الصحيحة
+    // 2. Checking the mod and guiding the player to the correct function
     if (lastMode === 'adaptive') {
         await window.startAdaptiveMode(); 
     } else if (lastMode === 'tutorial') {

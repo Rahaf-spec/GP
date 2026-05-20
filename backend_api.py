@@ -114,7 +114,7 @@ def camera_loop():
         conf = float(confidence.item())
         gesture = class_names[predicted.item()]
 
-        if conf < 0.80:
+        if conf < 0.70:
             gesture = "NoHand"
 
         latest_prediction["gesture"] = gesture

@@ -5,20 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HAND HERO - إحصائيات الأداء</title>
     
-    <!-- استدعاء نفس الخط المستخدم في الواجهة الأساسية -->
+    <!-- Recalling the same font used in the main interface-->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@500;700;900&display=swap" rel="stylesheet">
     
-    <!-- استدعاء مكتبة الرسوم البيانية -->
+    <!-- Calling up the graph library-->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
-    <!-- ربط ملف الـ CSS الأساسي ليرث الألوان والتنسيقات -->
+    <!-- Link the underlying CSS file to inherit the colors and formatting.-->
     <link rel="stylesheet" href="style.css">
 
     <style>
-        /* تنسيقات إضافية لضمان تطابق الصفحة مع روح اللعبة */
+        /* Additional formatting to ensure the page matches the spirit of the game*/
         body {
             font-family: 'Cairo', sans-serif;
-            background-color: #fdfaf3; /* نفس الخلفية الكريمية */
+            background-color: #fdfaf3; 
             margin: 0;
             padding: 20px;
             display: flex;
@@ -53,7 +53,7 @@
             right: 0;
         }
 
-        /* تنسيق بطاقات الرسوم البيانية لتشبه result-card و card */
+        /* Format the graph cards to resemble a result-card and a card */
         .chart-card {
             background: white;
             border: 4px solid #efe3d0; 
@@ -79,7 +79,7 @@
             font-weight: bold;
         }
 
-        /* لضمان ظهور الرسوم بشكل جيد داخل البطاقات */
+        /* To ensure the graphics appear clearly on the cards */
         canvas {
             max-width: 100%;
         }
@@ -88,7 +88,6 @@
 <body>
 
     <div class="container">
-        <!-- الهيدر متطابق مع طلبك (الزر يمين والعنوان وسط) -->
         <div class="header-section">
             <div class="back-row">
                 <button class="small-btn btn-gray" onclick="window.location.href='index.html'">رجوع</button>
@@ -98,19 +97,18 @@
 
         <p id="loadingText">جاري جلب بيانات بطلنا ...</p>
 
-        <!-- المربع الأول: الدقة (باللون البني الأساسي) -->
+      
         <div class="chart-card">
             <h3>📈 مستوى الدقة لكل لعبة</h3>
             <canvas id="accuracyChart"></canvas>
         </div>
 
-        <!-- المربع الثاني: وقت الاستجابة (باللون الأصفر/الذهبي) -->
+      
         <div class="chart-card">
             <h3>⏱️ سرعة استجابة اللاعب (ثواني)</h3>
             <canvas id="reactionChart"></canvas>
         </div>
 
-        <!-- المربع الثالث: الأخطاء (باللون الوردي/الأحمر) -->
         <div class="chart-card">
             <h3>⚠️ رصد الحركات الخاطئة للاعب</h3>
             <canvas id="wrongMovesChart"></canvas>

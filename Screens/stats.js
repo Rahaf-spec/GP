@@ -24,7 +24,6 @@
         });
 
         function renderCharts(games) {
-            // ألوان مستوحاة من الواجهة (btn-green, btn-purple, btn-pink)
             const colorPurple = '#a55eea'; 
             const colorGreen = '#26de81';
             const colorPink = '#ff006e';
@@ -32,11 +31,11 @@
 
             const labels = games.map((_, i) => `لعبة ${i + 1}`);
 
-            // إعدادات الخطوط لتطابق Cairo
+            // Font settings to match Cairo
             Chart.defaults.font.family = "'Cairo', sans-serif";
             Chart.defaults.color = '#4a2c2a';
 
-            // 1. رسم الدقة (خطي - أخضر)
+            //1. Drawing accuracy (linear - green)
             new Chart(document.getElementById('accuracyChart'), {
                 type: 'line',
                 data: {
@@ -54,7 +53,7 @@
                 options: { responsive: true }
             });
 
-            // 2. رسم وقت الاستجابة (أعمدة - بنفسجي)
+            // 2. Plotting response time (bars - purple)
             new Chart(document.getElementById('reactionChart'), {
                 type: 'bar',
                 data: {
@@ -69,7 +68,7 @@
                 options: { responsive: true }
             });
 
-            // 3. رسم الأخطاء (أعمدة - وردي)
+            // 3. Drawing the errors (columns - pink)
             new Chart(document.getElementById('wrongMovesChart'), {
                 type: 'bar',
                 data: {
