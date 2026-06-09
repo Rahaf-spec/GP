@@ -68,7 +68,7 @@ is running, and a dictionary to store the AI's most recent guess.
 """
 # ------------------ CAMERA CONTROL ------------------
 
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(1)
 
 camera_running = False   # ⭐⭐⭐⭐⭐⭐
 # This stores the latest AI decision so the game can ask for it anytime
