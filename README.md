@@ -53,3 +53,41 @@ The system operates on a modular Client-Server architecture. Follow these three 
 2. Install the required libraries and dependencies:
    ```bash
    pip install fastapi uvicorn opencv-python mediapipe pillow torch torchvision
+3. Verify that the trained model weights file (`best_model.pth`) is located in the root backend folder.
+4. Execute the backend server by running:
+
+```bash
+uvicorn backend_api:app --reload
+
+```
+
+> ℹ️ *The API will automatically initialize the camera and start listening for live gesture requests on `http://127.0.0.1:8000`.*
+
+### Step 3: Frontend (Game) Execution
+
+1. Open the project folder in **Visual Studio Code**.
+2. Locate the `index.html` file in your directory, right-click it, and select **"Open with Live Server"**.
+3. The extension will automatically open your default web browser to launch the application interface at:
+
+```text
+[http://127.0.0.1:5500/Screens/index.html](http://127.0.0.1:5500/Screens/index.html)
+
+```
+
+---
+
+## 📐 System Architecture
+
+The project follows a robust, low-latency 3-layer architecture:
+
+1. **Client Layer (The Game):** Captures frames via the webcam and displays the interactive environment to the child.
+2. **AI Inference Layer (ResNet-18):** Preprocesses input frames, applies ImageNet normalization, and infers hand gestures in milliseconds.
+3. **Backend API Layer:** Validates game logic, tracks performance metrics, and securely stores session history.
+
+---
+
+## 👥 Team & Acknowledgments
+
+* Developed as a Graduation Project by **Computer Science Undergraduate Students**.
+
+
