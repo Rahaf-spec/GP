@@ -33,7 +33,7 @@ Displays the visual data, progress tracking graphs, and session history tailored
 
 ## 🛠️ Tech Stack
 
-* **Frontend & UI Design:** HTML5, CSS3, JavaScript / Figma (Prototyping)
+* **Frontend & UI Design:** HTML5, CSS3, JavaScript 
 * **Backend API:** Python / FastAPI / Uvicorn
 * **AI & Computer Vision:** PyTorch / ResNet-18 / OpenCV / MediaPipe
 * **Testing Framework:** Pytest (for API, AI Integration, and Game Logic unit testing)
